@@ -1,8 +1,9 @@
+import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import type { ChoiceKind } from '../engine/types'
 import { refreshChoices, startAdventure, takeAction } from '../game/loop'
 import { useGame } from '../store/game'
-import { Button } from './ui'
+import { Button, spotlight } from './ui'
 
 export const KIND_ICON: Record<ChoiceKind, string> = {
   explore: '🔍',
@@ -14,11 +15,25 @@ export const KIND_ICON: Record<ChoiceKind, string> = {
   rest: '🏕️',
 }
 
+const KIND_TINT: Record<ChoiceKind, string> = {
+  explore: 'from-sky-500/30',
+  social: 'from-emerald-500/30',
+  bold: 'from-orange-500/35',
+  stealth: 'from-indigo-500/35',
+  magic: 'from-fuchsia-500/30',
+  combat: 'from-red-500/35',
+  rest: 'from-amber-500/30',
+}
+
 export function StatusLine() {
   const status = useGame((s) => s.status)
   return (
-    <div className="flex items-center gap-2 text-sm italic text-amber-300/80">
-      <span className="inline-block h-2 w-2 animate-ping rounded-full bg-amber-400" />
+    <div className="flex items-center gap-2 text-sm italic text-accent/90">
+      <span className="flex gap-1">
+        {[0, 1, 2].map((i) => (
+          <motion.span key={i} className="h-1.5 w-1.5 rounded-full bg-accent" animate={{ opacity: [0.2, 1, 0.2], y: [0, -3, 0] }} transition={{ repeat: Infinity, duration: 1, delay: i * 0.15 }} />
+        ))}
+      </span>
       {status || 'Working…'}
     </div>
   )
@@ -37,22 +52,33 @@ export function ActionBar() {
   const stalled = !busy && choices.length === 0
 
   return (
-    <div className="space-y-2">
-      {busy && <StatusLine />}
-      {!busy && choices.length > 0 && (
-        <div className="grid gap-2 sm:grid-cols-2">
-          {choices.map((c, i) => (
-            <button
-              key={i}
-              onClick={() => act(c.text)}
-              className="flex items-start gap-2 rounded-lg border border-amber-800/50 bg-stone-900/80 px-3 py-2 text-left text-base text-stone-200 transition hover:border-amber-500 hover:bg-amber-950/40"
-            >
-              <span title={c.kind}>{KIND_ICON[c.kind] ?? '•'}</span>
-              <span>{c.text}</span>
-            </button>
-          ))}
-        </div>
-      )}
+    <div className="space-y-2.5 pb-14 lg:pb-0">
+      <AnimatePresence mode="wait">
+        {busy ? (
+          <motion.div key="busy" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="px-1">
+            <StatusLine />
+          </motion.div>
+        ) : choices.length > 0 ? (
+          <motion.div key={choices.map((c) => c.text).join('|')} className="grid gap-2 sm:grid-cols-2" initial="hidden" animate="shown" variants={{ shown: { transition: { staggerChildren: 0.07 } } }}>
+            {choices.map((c, i) => (
+              <motion.button
+                key={i}
+                variants={{ hidden: { opacity: 0, y: 14, scale: 0.97 }, shown: { opacity: 1, y: 0, scale: 1 } }}
+                whileHover={{ y: -3 }}
+                whileTap={{ scale: 0.98 }}
+                onPointerMove={spotlight}
+                onClick={() => act(c.text)}
+                className="spotlight panel group flex items-start gap-3 px-3.5 py-3 text-left"
+              >
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${KIND_TINT[c.kind] ?? 'from-white/20'} to-transparent text-lg ring-1 ring-white/10 transition group-hover:scale-110`} title={c.kind}>
+                  {KIND_ICON[c.kind] ?? '•'}
+                </span>
+                <span className="text-[1.02rem] leading-snug text-ink">{c.text}</span>
+              </motion.button>
+            ))}
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
       {stalled && (
         <div className="flex gap-2">
           {log.length === 0 ? (
@@ -63,18 +89,19 @@ export function ActionBar() {
         </div>
       )}
       <form
-        className="flex gap-2"
+        className="panel flex items-center gap-2 p-1.5 pl-4 focus-within:border-accent/70 focus-within:shadow-[0_0_30px_-10px_var(--t-accent)]"
         onSubmit={(e) => {
           e.preventDefault()
           act(text)
         }}
       >
+        <span className="text-xl opacity-80">✒️</span>
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
           disabled={busy}
-          placeholder={busy ? 'Wait for the Dungeon Master…' : 'What do you do? Anything goes.'}
-          className="min-w-0 flex-1 rounded-lg border border-stone-700 bg-stone-900 px-4 py-3 text-stone-100 placeholder:text-stone-500 focus:border-amber-600 focus:outline-none disabled:opacity-50"
+          placeholder={busy ? 'The Dungeon Master is speaking…' : 'What do you do?'}
+          className="min-w-0 flex-1 bg-transparent py-2 text-lg text-ink placeholder:text-faint focus:outline-none disabled:opacity-50"
         />
         <Button type="submit" disabled={busy || !text.trim()}>Act</Button>
       </form>

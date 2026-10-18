@@ -1,4 +1,5 @@
 import { useGame, type Settings } from '../../store/game'
+import { SkinPicker } from '../SkinPicker'
 import { Modal, selectCls } from '../ui'
 
 const ROLES: { key: keyof Pick<Settings, 'narratorModel' | 'directorModel' | 'arbiterModel'>; label: string; hint: string }[] = [
@@ -44,7 +45,10 @@ export function SettingsMenu({ models }: { models: string[] }) {
   const { openMenu, settings, setSettings } = useGame()
   return (
     <Modal title="Settings" onClose={() => openMenu(null)}>
-      <h3 className="mb-2 font-display text-amber-300">Models</h3>
+      <h3 className="mb-1 font-display text-amber-300">Interface theme</h3>
+      <p className="mb-3 text-sm text-stone-400">Auto follows your campaign's tone. Or pick any skin you like.</p>
+      <SkinPicker />
+      <h3 className="mb-2 mt-6 font-display text-amber-300">Models</h3>
       <ModelSettings models={models} />
       <h3 className="mb-2 mt-6 font-display text-amber-300">Narration length</h3>
       <Segmented

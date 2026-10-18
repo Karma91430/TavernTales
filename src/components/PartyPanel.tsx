@@ -1,51 +1,47 @@
+import { motion } from 'motion/react'
 import { subclassOf } from '../engine/abilities'
-import { armorClass, equippedWeapon } from '../engine/items'
+import { armorClass } from '../engine/items'
 import type { Character } from '../engine/types'
 import { useGame } from '../store/game'
-import { HpBar, Panel, Pips } from './ui'
+import { Portrait } from './Portrait'
+import { Pips, spotlight } from './ui'
 
-function MemberCard({ c, active }: { c: Character; active: boolean }) {
+function MemberCard({ c, i }: { c: Character; i: number }) {
   const openMenu = useGame((s) => s.openMenu)
-  const down = c.hp === 0
+  const sub = subclassOf(c)
   const slots = c.resources.spellSlots
   return (
-    <button
+    <motion.button
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: i * 0.08 }}
+      whileHover={{ x: 4 }}
+      onPointerMove={spotlight}
       onClick={() => openMenu('character', c.id)}
-      className={`w-full rounded-lg border p-3 text-left transition hover:border-amber-500/70 ${
-        active ? 'border-rose-500 ring-2 ring-rose-500/40' : c.isPlayer ? 'border-amber-700/60 bg-amber-950/20' : 'border-stone-700/60 bg-stone-950/40'
-      } ${down ? 'opacity-60 grayscale' : ''}`}
+      className={`spotlight panel flex w-60 shrink-0 items-center gap-3 p-2.5 text-left lg:w-full ${c.isPlayer ? 'border-accent/50' : ''}`}
     >
-      <div className="flex items-center gap-3">
-        <span className="text-2xl">{down ? '💀' : c.icon}</span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="truncate font-display text-amber-100">{c.name}</span>
-            <span className="shrink-0 text-sm text-stone-400">🛡️{armorClass(c)}</span>
-          </div>
-          <div className="truncate text-sm text-stone-400">{c.race} {c.className}{subclassOf(c) ? ` ${subclassOf(c)!.icon}` : ''} · Lv {c.level}{c.pendingChoices.length > 0 && ' ✨'}</div>
+      <Portrait c={c} size={58} />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-1">
+          <span className="skin-title truncate text-base text-ink">{c.name}</span>
+          <span className="shrink-0 rounded-full bg-accent/15 px-1.5 text-[11px] text-accent">Lv {c.level}{c.pendingChoices.length > 0 && ' ✨'}</span>
+        </div>
+        <div className="truncate text-xs text-muted">{sub ? `${sub.icon} ${sub.name}` : `${c.race} ${c.className}`}</div>
+        <div className="mt-1 flex items-center justify-between text-xs text-muted">
+          <span className="tabular-nums">❤️ {c.hp}/{c.maxHp} · 🛡️ {armorClass(c)}</span>
+          {slots && <Pips current={slots.current} max={slots.max} />}
         </div>
       </div>
-      <div className="mt-2 flex items-center gap-2">
-        <HpBar hp={c.hp} max={c.maxHp} />
-        <span className="w-14 text-right text-sm tabular-nums text-stone-300">{c.hp}/{c.maxHp}</span>
-      </div>
-      <div className="mt-1 flex items-center justify-between text-xs text-stone-500">
-        <span className="truncate">{equippedWeapon(c)?.name ?? 'Unarmed'}</span>
-        {slots && <span className="flex items-center gap-1">✨ <Pips current={slots.current} max={slots.max} /></span>}
-      </div>
-    </button>
+    </motion.button>
   )
 }
 
 export function PartyPanel() {
   const party = useGame((s) => s.party)
-  const activeId = useGame((s) => (s.combat ? s.combat.order[s.combat.turn]?.id : null))
   return (
-    <Panel className="p-4">
-      <h2 className="mb-3 font-display text-sm uppercase tracking-widest text-amber-300">The Party</h2>
-      <div className="space-y-3">
-        {party.map((c) => <MemberCard key={c.id} c={c} active={c.id === activeId} />)}
-      </div>
-    </Panel>
+    <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
+      <h2 className="skin-title hidden px-1 text-xs uppercase tracking-[0.25em] text-faint lg:block">The party</h2>
+      {party.map((c, i) => <MemberCard key={c.id} c={c} i={i} />)}
+    </div>
   )
 }

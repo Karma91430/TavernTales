@@ -63,7 +63,7 @@ export function CombatPanel() {
 
   if (!myTurn) {
     return (
-      <div className="flex min-h-16 items-center justify-between gap-2 rounded-xl border border-rose-900/60 bg-stone-950/85 px-4 py-3">
+      <div className="panel flex min-h-16 items-center justify-between gap-2 border-danger/40 px-4 py-3">
         {busy ? <StatusLine /> : <span className="text-sm text-stone-400">Waiting for {currentName ?? 'the next combatant'}…</span>}
         {!busy && <Button size="sm" variant="ghost" onClick={() => void resumeCombat()}>Continue</Button>}
       </div>
@@ -71,9 +71,9 @@ export function CombatPanel() {
   }
 
   return (
-    <div className="rounded-xl border border-rose-900/60 bg-stone-950/85 p-3">
+    <div className="panel border-danger/40 p-3">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <span className="font-display text-amber-300">Your turn, {me.name}</span>
+        <span className="skin-title text-lg text-accent">Your turn, {me.name}</span>
         {target && (
           <span className="text-sm text-stone-300">
             🎯 {target.icon} {target.name} · AC {target.ac} · {target.hp}/{target.maxHp} HP

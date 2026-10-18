@@ -155,8 +155,8 @@ export function Battlefield() {
 
   return (
     <div
-      className="relative flex shrink-0 flex-col gap-3 overflow-hidden rounded-xl border border-rose-900/50 p-3 sm:p-4"
-      style={{ background: `linear-gradient(to bottom, ${env.sky[0]}, ${env.sky[1]})` }}
+      className="panel relative flex shrink-0 flex-col gap-3 overflow-hidden border-danger/40 p-3 sm:p-4"
+      style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.12), rgba(0,0,0,0.5))' }}
     >
       {timeOfDay === 'night' && <div className="pointer-events-none absolute inset-0 bg-indigo-950/40" />}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2" style={{ background: 'radial-gradient(ellipse at 50% 100%, color-mix(in oklab, var(--color-amber-900) 30%, transparent), transparent 70%)' }} />

@@ -109,7 +109,7 @@ export const useGame = create<GameState>()(
       settings: {
         narratorModel: 'qwen3:8b',
         directorModel: 'qwen3:8b',
-        arbiterModel: 'qwen3.5:2b',
+        arbiterModel: 'qwen3:8b',
         narrationLength: 'medium',
         diceSpeed: 'normal',
         skin: 'auto',
@@ -143,20 +143,25 @@ export const useGame = create<GameState>()(
     }),
     {
       name: 'tavern-tales-save',
-      version: 3,
+      version: 4,
       migrate: (persisted, version) => {
         const p = persisted as Partial<GameData> & { settings?: Partial<Settings> }
         // v1 saves used a different character/inventory model: start fresh but keep settings.
         if (version < 2) return { settings: p?.settings } as GameState
         // v3 added subclasses, level choices, conditions and scenery.
         if (version < 3) {
-          return {
+          persisted = {
             ...p,
             combat: null,
             environment: 'town',
             timeOfDay: 'day',
             party: (p.party ?? []).map((c) => ({ ...c, learned: c.learned ?? [], feats: c.feats ?? [], pendingChoices: c.pendingChoices ?? [] })),
-          } as unknown as GameState
+          }
+        }
+        // v4: the 2B arbiter made poor rules calls; the 8B model now plays every role.
+        if (version < 4) {
+          const p4 = persisted as { settings?: Partial<Settings> }
+          if (p4.settings?.arbiterModel === 'qwen3.5:2b') p4.settings.arbiterModel = 'qwen3:8b'
         }
         return persisted as GameState
       },

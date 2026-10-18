@@ -5,7 +5,7 @@ import { Modal, selectCls } from '../ui'
 const ROLES: { key: keyof Pick<Settings, 'narratorModel' | 'directorModel' | 'arbiterModel'>; label: string; hint: string }[] = [
   { key: 'narratorModel', label: 'Narrator', hint: 'writes the story — bigger is better' },
   { key: 'directorModel', label: 'Director', hint: 'builds the world, suggests choices, tracks quests' },
-  { key: 'arbiterModel', label: 'Arbiter', hint: 'rules calls each turn — small and fast' },
+  { key: 'arbiterModel', label: 'Arbiter', hint: 'rules calls each turn: skill, DC, consequences' },
 ]
 
 export function ModelSettings({ models }: { models: string[] }) {

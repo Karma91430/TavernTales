@@ -31,7 +31,7 @@ Default models (changeable in Settings):
 |---|---|---|
 | Narrator | `qwen3:8b` | Writes the story (streamed) |
 | Director | `qwen3:8b` | Builds the world, suggests choices, tracks quests and pacing |
-| Arbiter | `qwen3.5:2b` | Fast rules calls: which check, which DC, what are the consequences |
+| Arbiter | `qwen3:8b` | Rules calls: which check, which DC, what are the consequences |
 
 ## How a turn works
 

@@ -353,7 +353,7 @@
       <div class="roles">
         <div class="card role reveal"><div class="icon">📖</div><h3>The Narrator</h3><p>Writes every scene and voices your companions, streamed as it writes.</p><span class="model">qwen3:8b</span></div>
         <div class="card role reveal"><div class="icon">🎬</div><h3>The Director</h3><p>Builds the world, suggests your next moves, tracks quests, chapters and places.</p><span class="model">qwen3:8b</span></div>
-        <div class="card role reveal"><div class="icon">⚖️</div><h3>The Arbiter</h3><p>Makes the fast rules calls: which skill, which difficulty, what it costs you.</p><span class="model">qwen3.5:2b</span></div>
+        <div class="card role reveal"><div class="icon">⚖️</div><h3>The Arbiter</h3><p>Makes the rules calls: which skill, which difficulty, what it costs you.</p><span class="model">qwen3:8b</span></div>
       </div>
 
       <div class="flow">
@@ -379,7 +379,7 @@
       <div class="start">
         <ul class="reqs reveal">
           <li><span>🦙</span><span><b>Ollama</b> installed and running (<a href="https://ollama.com/download">download</a>).</span></li>
-          <li><span>🧠</span><span><b>Models:</b> <code>qwen3:8b</code> and <code>qwen3.5:2b</code> by default. Any chat model works; pick them in Settings.</span></li>
+          <li><span>🧠</span><span><b>Model:</b> <code>qwen3:8b</code> plays every role by default. Any Ollama chat model works, and each role can use a different one in Settings.</span></li>
           <li><span>🟢</span><span><b>Node.js</b> 22 or newer (the repo's <code>.nvmrc</code> pins Node 26).</span></li>
           <li><span>💻</span><span><b>Hardware:</b> a machine that runs an 8B model comfortably, e.g. a recent Mac or a GPU with 8&nbsp;GB of VRAM.</span></li>
         </ul>
@@ -391,7 +391,6 @@
 
 <span class="c"># 2. get the models</span>
 <span class="p">$ </span>ollama pull qwen3:8b
-<span class="p">$ </span>ollama pull qwen3.5:2b
 
 <span class="c"># 3. play</span>
 <span class="p">$ </span>npm install

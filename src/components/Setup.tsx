@@ -57,11 +57,13 @@ export function Setup({ models }: { models: string[] }) {
 
   useEffect(() => {
     if (!models.length) return
-    const fix = (m: string, fallback: string) => (models.includes(m) ? m : fallback)
+    // Keep the chosen model if installed, else prefer qwen3:8b, else the first chat model.
+    const preferred = models.find((m) => m === 'qwen3:8b') ?? models[0]
+    const fix = (m: string) => (models.includes(m) ? m : preferred)
     setSettings({
-      narratorModel: fix(settings.narratorModel, models[0]),
-      directorModel: fix(settings.directorModel, models[0]),
-      arbiterModel: fix(settings.arbiterModel, models[models.length - 1]),
+      narratorModel: fix(settings.narratorModel),
+      directorModel: fix(settings.directorModel),
+      arbiterModel: fix(settings.arbiterModel),
     })
   }, [models])
 

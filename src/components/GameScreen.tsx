@@ -5,6 +5,7 @@ import { ActionBar } from './ActionBar'
 import { Battlefield } from './Battlefield'
 import { CombatPanel } from './CombatPanel'
 import { DiceTray } from './DiceTray'
+import { GameOver } from './GameOver'
 import { CharacterSheet } from './menus/CharacterSheet'
 import { Inventory } from './menus/Inventory'
 import { Journal } from './menus/Journal'
@@ -159,6 +160,7 @@ export function GameScreen({ models }: { models: string[] }) {
       {menu === 'saves' && <Saves />}
       {menu === 'settings' && <SettingsMenu models={models} />}
       {levelUpOpen && !menu && <LevelUp />}
+      <GameOver />
     </div>
   )
 }

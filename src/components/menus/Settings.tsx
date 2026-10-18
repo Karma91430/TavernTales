@@ -5,7 +5,7 @@ import { Modal, selectCls } from '../ui'
 const ROLES: { key: keyof Pick<Settings, 'narratorModel' | 'directorModel' | 'arbiterModel'>; label: string; hint: string }[] = [
   { key: 'narratorModel', label: 'Narrator', hint: 'writes the story — bigger is better' },
   { key: 'directorModel', label: 'Director', hint: 'builds the world, suggests choices, tracks quests' },
-  { key: 'arbiterModel', label: 'Arbiter', hint: 'rules calls each turn — small and fast' },
+  { key: 'arbiterModel', label: 'Arbiter', hint: 'rules calls each turn: skill, DC, consequences' },
 ]
 
 export function ModelSettings({ models }: { models: string[] }) {
@@ -56,6 +56,17 @@ export function SettingsMenu({ models }: { models: string[] }) {
         options={[{ id: 'short', label: 'Short' }, { id: 'medium', label: 'Medium' }, { id: 'long', label: 'Long' }]}
         onChange={(narrationLength) => setSettings({ narrationLength })}
       />
+      <h3 className="mb-2 mt-6 font-display text-amber-300">Death</h3>
+      <Segmented
+        value={settings.deathRules ?? 'heroic'}
+        options={[{ id: 'heroic', label: 'Heroic (official)' }, { id: 'story', label: 'Story mode' }]}
+        onChange={(deathRules) => setSettings({ deathRules })}
+      />
+      <p className="mt-1 text-sm text-stone-500">
+        {(settings.deathRules ?? 'heroic') === 'heroic'
+          ? 'Death saving throws: at 0 HP, roll each turn; three failures and the character dies. If your hero dies, the tale ends.'
+          : 'Fallen characters are only knocked out and always wake up after the fight.'}
+      </p>
       <h3 className="mb-2 mt-6 font-display text-amber-300">Dice animation</h3>
       <Segmented
         value={settings.diceSpeed}

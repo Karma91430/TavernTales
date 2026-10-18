@@ -12,40 +12,42 @@ const weapon = (damage: string, damageType: string, value: number, extra: Partia
 })
 const armor = (armorBase: number, dexCap: number, value: number): Template => ({ type: 'armor', armorBase, dexCap, value })
 
+// SRD 5.2.1 equipment (p.89–99). Values are in gold pieces.
 export const CATALOG: Record<string, Template> = {
-  Longsword: weapon('1d8', 'slashing', 15),
-  Shortsword: weapon('1d6', 'piercing', 10, { finesse: true }),
-  Dagger: weapon('1d4', 'piercing', 2, { finesse: true }),
-  Rapier: weapon('1d8', 'piercing', 25, { finesse: true }),
-  Scimitar: weapon('1d6', 'slashing', 25, { finesse: true }),
-  Mace: weapon('1d6', 'bludgeoning', 5),
-  Quarterstaff: weapon('1d6', 'bludgeoning', 1),
-  Club: weapon('1d4', 'bludgeoning', 1),
-  Handaxe: weapon('1d6', 'slashing', 5),
-  Battleaxe: weapon('1d8', 'slashing', 10),
-  Greataxe: weapon('1d12', 'slashing', 30),
-  Greatsword: weapon('2d6', 'slashing', 50),
-  Warhammer: weapon('1d8', 'bludgeoning', 15),
-  Spear: weapon('1d6', 'piercing', 1),
-  Longbow: weapon('1d8', 'piercing', 50, { ranged: true }),
-  Shortbow: weapon('1d6', 'piercing', 25, { ranged: true }),
-  'Light crossbow': weapon('1d8', 'piercing', 25, { ranged: true }),
-  'Hand crossbow': weapon('1d6', 'piercing', 75, { ranged: true }),
+  Club: weapon('1d4', 'bludgeoning', 0.1, { light: true, mastery: 'slow' }),
+  Dagger: weapon('1d4', 'piercing', 2, { finesse: true, light: true, mastery: 'nick' }),
+  Handaxe: weapon('1d6', 'slashing', 5, { light: true, mastery: 'vex' }),
+  Mace: weapon('1d6', 'bludgeoning', 5, { mastery: 'sap' }),
+  Quarterstaff: weapon('1d6', 'bludgeoning', 0.2, { versatile: '1d8', mastery: 'topple' }),
+  Spear: weapon('1d6', 'piercing', 1, { versatile: '1d8', mastery: 'sap' }),
+  'Light crossbow': weapon('1d8', 'piercing', 25, { ranged: true, twoHanded: true, mastery: 'slow' }),
+  Shortbow: weapon('1d6', 'piercing', 25, { ranged: true, twoHanded: true, mastery: 'vex' }),
+  Battleaxe: weapon('1d8', 'slashing', 10, { versatile: '1d10', mastery: 'topple' }),
+  Greataxe: weapon('1d12', 'slashing', 30, { heavy: true, twoHanded: true, mastery: 'cleave' }),
+  Greatsword: weapon('2d6', 'slashing', 50, { heavy: true, twoHanded: true, mastery: 'graze' }),
+  Longsword: weapon('1d8', 'slashing', 15, { versatile: '1d10', mastery: 'sap' }),
+  Rapier: weapon('1d8', 'piercing', 25, { finesse: true, mastery: 'vex' }),
+  Scimitar: weapon('1d6', 'slashing', 25, { finesse: true, light: true, mastery: 'nick' }),
+  Shortsword: weapon('1d6', 'piercing', 10, { finesse: true, light: true, mastery: 'vex' }),
+  Warhammer: weapon('1d8', 'bludgeoning', 15, { versatile: '1d10', mastery: 'push' }),
+  'Hand crossbow': weapon('1d6', 'piercing', 75, { ranged: true, light: true, mastery: 'vex' }),
+  Longbow: weapon('1d8', 'piercing', 50, { ranged: true, heavy: true, twoHanded: true, mastery: 'slow' }),
   'Leather armor': armor(11, 99, 10),
   'Studded leather': armor(12, 99, 45),
   'Hide armor': armor(12, 2, 10),
   'Chain shirt': armor(13, 2, 50),
-  'Scale mail': armor(14, 2, 50),
+  'Scale mail': { ...armor(14, 2, 50), stealthDisadvantage: true },
   Breastplate: armor(14, 2, 400),
-  'Chain mail': armor(16, 0, 75),
-  'Plate armor': armor(18, 0, 1500),
+  'Chain mail': { ...armor(16, 0, 75), stealthDisadvantage: true },
+  'Plate armor': { ...armor(18, 0, 1500), stealthDisadvantage: true },
   Shield: { type: 'shield', acBonus: 2, value: 10 },
-  'Healing potion': { type: 'consumable', heal: '2d4+2', value: 50, description: 'A red, faintly glowing draught.' },
+  'Healing potion': { type: 'consumable', heal: '2d4+2', value: 50, description: 'A red, faintly glowing draught. Drinking it is a Bonus Action.' },
   'Greater healing potion': { type: 'consumable', heal: '4d4+4', value: 150, description: 'A deep crimson elixir.' },
-  Rations: { type: 'misc', value: 1, description: 'One day of trail food.' },
-  Torch: { type: 'misc', value: 1 },
+  "Healer's kit": { type: 'tool', value: 5, description: 'Stabilize a dying creature without a Medicine check (10 uses).' },
+  Rations: { type: 'misc', value: 0.5, description: 'One day of trail food.' },
+  Torch: { type: 'misc', value: 0.01 },
   Bedroll: { type: 'misc', value: 1 },
-  Arrows: { type: 'misc', value: 1 },
+  Arrows: { type: 'misc', value: 0.05 },
   Rope: { type: 'tool', value: 1, description: '50 feet of hempen rope.' },
   "Thieves' tools": { type: 'tool', value: 25 },
   Spellbook: { type: 'tool', value: 50, description: 'Your arcane formulae.' },
@@ -118,17 +120,32 @@ export function removeItem(inventory: Item[], idOrName: string, qty = 1): { inve
   return { inventory: next, removed: target }
 }
 
-/** Equips (or unequips) an item, unequipping anything else in the same slot. */
+/**
+ * Equips (or unequips) an item, unequipping anything else in the same slot.
+ * Two-handed weapons and shields can't be used together.
+ */
 export function toggleEquip(inventory: Item[], id: string): Item[] {
   const item = inventory.find((i) => i.id === id)
   if (!item || !['weapon', 'armor', 'shield'].includes(item.type)) return inventory
   const equip = !item.equipped
   return inventory.map((i) => {
     if (i.id === id) return { ...i, equipped: equip }
-    if (equip && i.type === item.type && i.equipped) return { ...i, equipped: false }
+    if (!equip || !i.equipped) return i
+    if (i.type === item.type) return { ...i, equipped: false }
+    if (item.type === 'shield' && i.type === 'weapon' && i.twoHanded) return { ...i, equipped: false }
+    if (item.twoHanded && i.type === 'shield') return { ...i, equipped: false }
     return i
   })
 }
+
+/** Damage die for a weapon: versatile weapons use the bigger die when no shield is held. */
+export function weaponDie(c: Character, w: Item | undefined): string {
+  if (!w) return '1'
+  const shield = c.inventory.some((i) => i.type === 'shield' && i.equipped)
+  return w.versatile && !shield ? w.versatile : (w.damage ?? '1d4')
+}
+
+export const hasStealthDisadvantage = (c: Character) => c.inventory.some((i) => i.type === "armor" && i.equipped && !!i.stealthDisadvantage)
 
 export const equippedWeapon = (c: Character) => c.inventory.find((i) => i.type === 'weapon' && i.equipped)
 
@@ -137,12 +154,19 @@ export function armorClass(c: Character): number {
   const body = c.inventory.find((i) => i.type === 'armor' && i.equipped)
   const shield = c.inventory.find((i) => i.type === 'shield' && i.equipped)
   const base = body ? (body.armorBase ?? 10) + Math.min(dex, body.dexCap ?? 99) : 10 + dex
-  return base + (shield?.acBonus ?? 0)
+  // Fighting Style: Defense (+1 AC in armor) for melee Fighters.
+  const defense = c.className === 'Fighter' && body && !equippedWeapon(c)?.ranged ? 1 : 0
+  return base + (shield?.acBonus ?? 0) + defense
 }
 
 export function describeItem(i: Item): string {
   const parts: string[] = []
-  if (i.damage) parts.push(`${i.damage} ${i.damageType}${i.finesse ? ', finesse' : ''}${i.ranged ? ', ranged' : ''}`)
+  if (i.damage) {
+    const props = [i.finesse && 'finesse', i.light && 'light', i.ranged && 'ranged', i.heavy && 'heavy', i.twoHanded && 'two-handed', i.versatile && `versatile ${i.versatile}`].filter(Boolean)
+    parts.push(`${i.damage} ${i.damageType}${props.length ? `, ${props.join(', ')}` : ''}`)
+    if (i.mastery) parts.push(`mastery: ${i.mastery}`)
+  }
+  if (i.stealthDisadvantage) parts.push('Stealth disadvantage')
   if (i.armorBase) parts.push(`AC ${i.armorBase}${i.dexCap === 99 ? ' + DEX' : i.dexCap ? ` + DEX (max ${i.dexCap})` : ''}`)
   if (i.acBonus) parts.push(`+${i.acBonus} AC`)
   if (i.heal) parts.push(`heals ${i.heal}`)

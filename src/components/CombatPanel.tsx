@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { abilitiesFor, canUse, CONDITION_INFO, MANEUVERS, type AbilityDef } from '../engine/abilities'
+import { abilitiesFor, canUse, castableSlots, CONDITION_INFO, MANEUVERS, type AbilityDef } from '../engine/abilities'
 import { attackStats, checkModifier, hasExtraAttack, SKILLS } from '../engine/character'
 import { bestSkill } from '../engine/check'
 import { fmtMod } from '../engine/dice'
-import { equippedWeapon } from '../engine/items'
-import { combatAbility, combatAttack, combatDodge, combatFlee, combatItem, combatManeuver, isPlayersTurn, resumeCombat } from '../game/combat'
+import { equippedWeapon, weaponDie } from '../engine/items'
+import { combatAbility, combatAttack, combatDodge, combatFlee, combatItem, combatManeuver, endPlayerTurn, isPlayersTurn, resumeCombat } from '../game/combat'
 import { pickAlly } from '../store/fx'
 import { useGame } from '../store/game'
 import { StatusLine } from './ActionBar'
@@ -46,6 +46,21 @@ export function CombatPanel() {
   const atk = attackStats(me, weapon)
   const potions = me.inventory.filter((i) => i.heal)
   const current = combat.order[combat.turn]
+  const { actions, bonus } = combat.budget ?? { actions: 1, bonus: true }
+  const dying = party.filter((p) => p.hp === 0 && !p.dead && !p.deathSaves?.stable)
+  const conc = combat.concentration?.[me.id]
+  /** Whether an ability fits what's left of the turn. */
+  const affordable = (a: AbilityDef) => (a.id === 'action_surge' ? true : a.bonus ? bonus : actions > 0)
+  const costLabel = (a: AbilityDef) => {
+    if (a.spellLevel === 0) return 'Cantrip'
+    if (a.spellLevel) {
+      const free = a.id === 'hunters_mark' && (me.resources.favoredEnemy?.current ?? 0) > 0
+      const slots = castableSlots(me, a.spellLevel).reduce((n, l) => n + (me.resources[`slot${l}`]?.current ?? 0), 0)
+      return free ? `Level ${a.spellLevel} · free cast (${me.resources.favoredEnemy!.current})` : `Level ${a.spellLevel} · ${slots} slot${slots === 1 ? '' : 's'}`
+    }
+    return a.cost ? <span className="flex items-center gap-1">Uses: <Pips current={me.resources[a.cost]?.current ?? 0} max={me.resources[a.cost]?.max ?? 0} /></span> : 'At will'
+  }
+  const tags = (a: AbilityDef) => [a.bonus && 'Bonus action', a.concentration && 'Concentration', a.homebrew && 'Homebrew'].filter(Boolean).join(' · ')
   const currentName = current?.kind === 'enemy' ? combat.enemies.find((e) => e.id === current.id)?.name : party.find((p) => p.id === current?.id)?.name
 
   /** Runs an action, asking for an ally first when needed. */
@@ -73,7 +88,13 @@ export function CombatPanel() {
   return (
     <div className="panel border-danger/40 p-3">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <span className="skin-title text-lg text-accent">Your turn, {me.name}</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="skin-title text-lg text-accent">Your turn, {me.name}</span>
+          <span className={`rounded-full border px-2 py-0.5 text-xs ${actions > 0 ? 'border-accent/60 text-accent' : 'border-line text-faint line-through'}`}>⚔️ Action{actions > 1 ? ` ×${actions}` : ''}</span>
+          <span className={`rounded-full border px-2 py-0.5 text-xs ${bonus ? 'border-magic/60 text-magic' : 'border-line text-faint line-through'}`}>✦ Bonus</span>
+          {conc && <span className="rounded-full border border-line px-2 py-0.5 text-xs text-muted" title="Concentration">🧠 {conc.name}</span>}
+          <Button size="sm" variant="ghost" onClick={() => void endPlayerTurn()}>End turn ⏭</Button>
+        </div>
         {target && (
           <span className="text-sm text-stone-300">
             🎯 {target.icon} {target.name} · AC {target.ac} · {target.hp}/{target.maxHp} HP
@@ -100,9 +121,9 @@ export function CombatPanel() {
             accent
             icon="⚔️"
             title={`Attack${hasExtraAttack(me) ? ' ×2' : ''}${target ? ` ${target.name}` : ''}`}
-            subtitle={`${weapon?.name ?? 'Unarmed'} · ${fmtMod(atk.bonus)} to hit · ${weapon?.damage ?? '1d4'}${fmtMod(atk.damageMod)} ${weapon?.damageType ?? 'bludgeoning'}`}
-            detail={me.className === 'Rogue' ? 'Sneak Attack applies automatically with a finesse or ranged weapon.' : undefined}
-            disabled={!target}
+            subtitle={`${weapon?.name ?? 'Unarmed'} · ${fmtMod(atk.bonus)} to hit · ${weaponDie(me, weapon)}${fmtMod(atk.damageMod)} ${weapon?.damageType ?? 'bludgeoning'}${weapon?.mastery ? ` · ${weapon.mastery}` : ''}`}
+            detail={me.className === 'Rogue' ? 'Sneak Attack applies with a finesse or ranged weapon when you have advantage or an ally is fighting the target.' : undefined}
+            disabled={!target || actions <= 0}
             onClick={() => void act('enemy', '', (t, f) => combatAttack(t!, f))}
           />
         )}
@@ -113,26 +134,26 @@ export function CombatPanel() {
               key={a.id}
               icon={a.icon}
               title={a.name}
-              subtitle={a.cost ? <span className="flex items-center gap-1">Cost: <Pips current={me.resources[a.cost]?.current ?? 0} max={me.resources[a.cost]?.max ?? 0} /></span> : 'At will'}
+              subtitle={<span className="flex flex-wrap items-center gap-x-2">{costLabel(a)}{tags(a) && <span className="text-magic/80">{tags(a)}</span>}</span>}
               detail={a.description}
-              disabled={!canUse(me, a) || (a.target === 'enemy' && !target)}
+              disabled={!canUse(me, a) || !affordable(a) || (a.target === 'enemy' && !target)}
               onClick={() => void act(a.target, `Choose who receives ${a.name}`, (t, f) => combatAbility(a.id, t, f))}
             />
           ))}
 
         {tab === 'skills' &&
           MANEUVERS.map((m) => {
-            const skill = bestSkill(me, m.skills)
-            const noTarget = m.target === 'ally' ? !party.some((p) => p.hp < p.maxHp) : m.target === 'enemy' && !target
+            const skill = m.skills.length ? bestSkill(me, m.skills) : ''
+            const noTarget = m.id === 'stabilize' ? !dying.length : m.target === 'enemy' && !target
             return (
               <ActionCard
                 key={m.id}
                 icon={m.icon}
                 title={m.name}
-                subtitle={`${skill} ${fmtMod(checkModifier(me, SKILLS[skill], skill))}`}
+                subtitle={skill ? `${skill} ${fmtMod(checkModifier(me, SKILLS[skill], skill))}` : 'No roll'}
                 detail={m.description}
-                disabled={noTarget}
-                onClick={() => void act(m.target, `Choose who to help with ${m.name}`, (t, f) => combatManeuver(m.id, m.target === 'self' ? undefined : t, f))}
+                disabled={noTarget || actions <= 0}
+                onClick={() => void act(m.target, `Choose a dying ally to stabilize`, (t, f) => combatManeuver(m.id, m.target === 'self' ? undefined : t, f))}
               />
             )
           })}
@@ -144,8 +165,9 @@ export function CombatPanel() {
                 key={p.id}
                 icon="🧪"
                 title={`${p.name} ×${p.qty}`}
-                subtitle={`Heals ${p.heal}`}
+                subtitle={`Heals ${p.heal} · Bonus action`}
                 detail={p.description}
+                disabled={!bonus}
                 onClick={() => void act('ally', `Who drinks the ${p.name}?`, (t, f) => combatItem(p.id, t!, f))}
               />
             ))
@@ -155,8 +177,8 @@ export function CombatPanel() {
 
         {tab === 'defend' && (
           <>
-            <ActionCard icon="🛡️" title="Dodge" detail="Until your next turn, attacks against you have disadvantage." onClick={() => void act('self', '', (_, f) => combatDodge(f))} />
-            <ActionCard icon="🏃" title="Flee" subtitle={`Acrobatics vs DC ${10 + alive.length + (alive.some((e) => e.boss) ? 3 : 0)}`} detail="Try to break away with the whole party. Failure wastes your turn." onClick={() => void act('self', '', (_, f) => combatFlee(f))} />
+            <ActionCard icon="🛡️" title="Dodge" detail="Until your next turn, attacks against you have disadvantage and you have advantage on DEX saves." disabled={actions <= 0} onClick={() => void act('self', '', (_, f) => combatDodge(f))} />
+            <ActionCard icon="🏃" title="Flee" subtitle={`Acrobatics vs DC ${10 + alive.length + (alive.some((e) => e.boss) ? 3 : 0)} · house rule`} detail="Try to break away with the whole party. Failure wastes your action." disabled={actions <= 0} onClick={() => void act('self', '', (_, f) => combatFlee(f))} />
           </>
         )}
       </div>

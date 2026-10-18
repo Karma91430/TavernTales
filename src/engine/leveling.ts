@@ -1,5 +1,5 @@
-import { ABILITY_DEFS, FEATS, LEARNABLE, SUBCLASSES } from './abilities'
-import { refreshResources, SKILLS } from './character'
+import { ABILITY_DEFS, CLASS_SPELLS, FEATS, SUBCLASSES } from './abilities'
+import { checkModifier, maxSpellLevel, refreshResources, SKILLS } from './character'
 import { abilityMod, pick } from './dice'
 import { ABILITIES, type Ability, type Character, type LevelChoice } from './types'
 
@@ -17,16 +17,19 @@ export function choiceOptions(c: Character, choice: LevelChoice): ChoiceOption[]
   switch (choice.kind) {
     case 'subclass':
       return SUBCLASSES[c.className] ?? []
-    case 'ability':
-      return (LEARNABLE[c.className] ?? [])
-        .filter((id) => !c.learned.includes(id))
+    case 'ability': {
+      // Learn a spell you can actually cast at this level.
+      const maxLevel = maxSpellLevel(c.className, choice.level)
+      return (CLASS_SPELLS[c.className]?.learn ?? [])
+        .filter((id) => !c.learned.includes(id) && (ABILITY_DEFS[id].spellLevel ?? 0) <= maxLevel)
         .map((id) => abilityOption(id))
+    }
     case 'skill':
       return Object.keys(SKILLS)
         .filter((s) => !c.proficiencies.includes(s))
         .map((s) => ({ id: s, name: s, icon: '🎯', description: `${SKILLS[s]}-based skill` }))
     case 'asi':
-      return FEATS
+      return FEATS.filter((f) => !f.legacy && !c.feats.includes(f.id))
   }
 }
 
@@ -49,6 +52,8 @@ export function applyChoice(c: Character, choice: LevelChoice, value: string | A
   switch (choice.kind) {
     case 'subclass':
       next = refreshResources({ ...next, subclass: value as string })
+      // College of Lore: bonus skill proficiency.
+      if (value === 'lore') next = { ...next, pendingChoices: [...next.pendingChoices, { level: choice.level, kind: 'skill' }] }
       break
     case 'ability':
       next = { ...next, learned: [...next.learned, value as string] }
@@ -62,6 +67,14 @@ export function applyChoice(c: Character, choice: LevelChoice, value: string | A
       else {
         next = { ...next, feats: [...next.feats, v.feat] }
         if (v.feat === 'tough') next = { ...next, maxHp: next.maxHp + 2 * next.level, hp: next.hp + 2 * next.level }
+        if (v.feat === 'skilled') {
+          // Three new skills: the ones this character is naturally best at.
+          const best = Object.keys(SKILLS)
+            .filter((sk) => !next.proficiencies.includes(sk))
+            .sort((a, b) => checkModifier(next, SKILLS[b], b) - checkModifier(next, SKILLS[a], a))
+            .slice(0, 3)
+          next = { ...next, proficiencies: [...next.proficiencies, ...best] }
+        }
       }
       next = refreshResources(next)
       break

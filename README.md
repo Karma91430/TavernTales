@@ -6,6 +6,7 @@ A local D&D-style adventure game: a web UI with an AI Dungeon Master running ent
 
 - **World forging:** from a premise and a tone, the AI writes a campaign: main quest with objectives, NPCs with secrets, an antagonist, locations and a 4-act outline.
 - **Story turns:** type anything or pick a suggested choice. Uncertain actions trigger ability checks with animated dice.
+- **Official fifth-edition rules:** built on the SRD 5.2.1 (2024 rules): spell slots and Concentration, death saving throws, saving throws, Weapon Mastery, 2024 actions and real monster stat blocks. See **[RULES.md](RULES.md)** for the full rulebook and every simplification.
 - **Turn-based combat on a battlefield view:** initiative, attack rolls vs AC, crits, floating damage numbers, hit shakes and lunges. Class abilities and spells (Sneak Attack, Fire Bolt, Healing Word, Burning Hands, Thunderwave, Hunter's Mark…), **skill moves** (Shove, Intimidate, Feint, Hide, Study Weakness, First Aid, Rally) and **conditions** (prone, frightened, restrained, outlined, exposed, hidden, inspired…). AI companions and enemies take their own turns.
 - **Bosses:** dramatic intro, multiattack, and a **"How do you want to do this?"** moment when one falls: you describe the killing blow and the narrator turns it into the scene.
 - **Progression:** XP and level-ups with real choices: **subclasses** at level 2 (Champion, Battle Master, Assassin, Swashbuckler, Evoker, Abjurer, Life, War, Hunter, Gloom Stalker, Lore, Valor), new abilities at 3 and 5, a new skill at 3, ability score improvement or a feat at 4. Companions level up on their own.
@@ -31,7 +32,7 @@ Default models (changeable in Settings):
 |---|---|---|
 | Narrator | `qwen3:8b` | Writes the story (streamed) |
 | Director | `qwen3:8b` | Builds the world, suggests choices, tracks quests and pacing |
-| Arbiter | `qwen3.5:2b` | Fast rules calls: which check, which DC, what are the consequences |
+| Arbiter | `qwen3:8b` | Rules calls: which check, which DC, what are the consequences |
 
 ## How a turn works
 
@@ -60,3 +61,9 @@ model output is always validated against it.
 | `src/game/` | Orchestration: exploration `loop`, `combat`, menu `actions`, shared `common` |
 | `src/store/` | Zustand store (auto-saved to localStorage), save slots, and `fx` (floating text, cinematics, finisher prompts) |
 | `src/components/` | UI: setup, intro, scenery, battlefield, combat panel, cinematics, finisher, dice overlay, menus |
+
+## License & attribution
+
+This work includes material from the System Reference Document 5.2.1 ("SRD 5.2.1") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode. It also includes material from the SRD 5.1 under the same license (see [RULES.md](RULES.md)).
+
+Tavern Tales is compatible with fifth edition and is not affiliated with Wizards of the Coast.

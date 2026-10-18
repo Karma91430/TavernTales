@@ -2,6 +2,7 @@ import { ABILITY_DEFS } from '../engine/abilities'
 import { hitDie, restoreResources } from '../engine/character'
 import { formulaRoll } from '../engine/check'
 import { abilityMod, rollDie } from '../engine/dice'
+import type { Character } from '../engine/types'
 import { addItem, removeItem, toggleEquip } from '../engine/items'
 import { narrateRest } from '../llm/narrator'
 import { playCinematic } from '../store/fx'
@@ -67,17 +68,51 @@ export function useAbilityOutOfCombat(memberId: string, abilityId: string, targe
   })
 }
 
-export function shortRest() {
-  const { shortRestsLeft, combat } = get()
-  if (combat || shortRestsLeft <= 0) return Promise.resolve()
-  return runExclusive(async () => {
-    useGame.setState({ shortRestsLeft: shortRestsLeft - 1, choices: [] })
-    get().addLog({ kind: 'action', text: 'We take a short rest.' })
-    for (const p of get().party) {
-      const healed = Math.max(1, rollDie(hitDie(p)) + abilityMod(p.stats.CON))
-      get().updateCharacter(p.id, (c) => ({ ...restoreResources(c, 'short'), hp: Math.min(c.maxHp, Math.max(c.hp, 1) + healed) }))
+/** Spends Hit Dice to heal during a Short Rest (SRD p.187): roll until healthy or out of dice. */
+function spendHitDice(c: Character): { character: Character; healed: number; dice: number } {
+  let { hp } = c
+  let dice = c.resources.hitDice?.current ?? 0
+  let used = 0
+  const avg = Math.floor(hitDie(c) / 2) + 1 + abilityMod(c.stats.CON)
+  while (dice > 0 && c.maxHp - hp >= Math.max(1, avg)) {
+    hp = Math.min(c.maxHp, hp + Math.max(1, rollDie(hitDie(c)) + abilityMod(c.stats.CON)))
+    dice--
+    used++
+  }
+  const character = { ...c, hp, resources: c.resources.hitDice ? { ...c.resources, hitDice: { ...c.resources.hitDice, current: dice } } : c.resources }
+  return { character, healed: hp - c.hp, dice: used }
+}
+
+/** Wizard Arcane Recovery: once per Long Rest, regain slot levels totalling half your level (rounded up). */
+function arcaneRecovery(c: Character): Character {
+  if (c.className !== 'Wizard' || !c.resources.arcaneRecovery?.current) return c
+  let budget = Math.ceil(c.level / 2)
+  const resources: Character['resources'] = { ...c.resources, arcaneRecovery: { ...c.resources.arcaneRecovery, current: 0 } }
+  for (const level of [3, 2, 1]) {
+    const slot = resources[`slot${level}`]
+    while (slot && slot.current < slot.max && budget >= level) {
+      resources[`slot${level}`] = { ...resources[`slot${level}`], current: resources[`slot${level}`].current + 1 }
+      budget -= level
+      if (resources[`slot${level}`].current >= slot.max) break
     }
-    get().addLog({ kind: 'system', text: '⛺ Short rest: everyone spends a hit die and recovers some HP. Short-rest abilities restored.' })
+  }
+  return { ...c, resources }
+}
+
+export function shortRest() {
+  if (get().combat) return Promise.resolve()
+  return runExclusive(async () => {
+    useGame.setState({ choices: [] })
+    get().addLog({ kind: 'action', text: 'We take a short rest.' })
+    const notes: string[] = []
+    for (const p of get().party.filter((p) => !p.dead)) {
+      // At 0 HP a character can't spend Hit Dice until stabilized: they come round with 1 HP after the hour.
+      const base = p.hp === 0 ? { ...p, hp: 1, deathSaves: undefined } : p
+      const { character, healed, dice } = spendHitDice(restoreResources(arcaneRecovery(base), 'short'))
+      get().updateCharacter(p.id, () => character)
+      if (dice) notes.push(`${p.name} spends ${dice} Hit ${dice > 1 ? 'Dice' : 'Die'} (+${healed} HP)`)
+    }
+    get().addLog({ kind: 'system', text: `⛺ Short rest. ${notes.join(', ') || 'Nobody needed healing.'} Short-rest abilities restored.` })
     await restScene('short', false)
   })
 }
@@ -93,9 +128,14 @@ export function longRest() {
       await restScene('long', true)
       return
     }
-    for (const p of get().party) get().updateCharacter(p.id, (c) => ({ ...restoreResources(c, 'long'), hp: c.maxHp }))
-    useGame.setState({ shortRestsLeft: 2 })
-    get().addLog({ kind: 'system', text: '🏕️ Long rest: the party is fully healed and all abilities are restored.' })
+    for (const p of get().party.filter((p) => !p.dead)) {
+      get().updateCharacter(p.id, (c) => {
+        // Aid's bonus ends; everything else comes back, including all Hit Dice (SRD p.186).
+        const maxHp = c.maxHp - (c.aid ?? 0)
+        return { ...restoreResources(c, 'long'), maxHp, hp: maxHp, aid: 0, deathSaves: undefined }
+      })
+    }
+    get().addLog({ kind: 'system', text: '🏕️ Long rest: the party is fully healed; spell slots, abilities and Hit Dice are restored.' })
     await restScene('long', false)
   })
 }
@@ -113,6 +153,6 @@ async function restScene(kind: 'short' | 'long', interrupted: boolean) {
   ])
   if (!interrupted && kind === 'long') useGame.setState({ timeOfDay: 'day' })
   useGame.setState((s) => ({ turn: s.turn + 1 }))
-  if (interrupted && (await fight(narration))) return
+  if (interrupted && (await fight(narration, { surprise: 'party' }))) return
   await updateScene(narration)
 }

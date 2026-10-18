@@ -1,5 +1,5 @@
 import { abilitiesFor, canUse, CLASS_FEATURES, FEATS, RESOURCE_LABELS, subclassOf } from '../../engine/abilities'
-import { attackStats, checkModifier, CLASSES, proficiencyBonus, SKILLS, spellAttackBonus, spellSaveDC, XP_LEVELS, xpForNextLevel } from '../../engine/character'
+import { attackStats, checkModifier, CLASSES, proficiencyBonus, RACES, saveModifier, SKILLS, spellAttackBonus, spellSaveDC, XP_LEVELS, xpForNextLevel } from '../../engine/character'
 import { abilityMod, fmtMod } from '../../engine/dice'
 import { armorClass, describeItem, equippedWeapon } from '../../engine/items'
 import { ABILITIES } from '../../engine/types'
@@ -27,6 +27,7 @@ export function CharacterSheet() {
           <div className="text-stone-400">{c.race} {c.className}{subclassOf(c) && ` · ${subclassOf(c)!.icon} ${subclassOf(c)!.name}`} · Level {c.level}</div>
           {c.personality && <p className="mt-1 italic text-stone-400">“{c.personality}”</p>}
           {c.backstory && <p className="mt-1 max-w-xl text-stone-300">{c.backstory}</p>}
+          {RACES[c.race] && <p className="mt-1 max-w-xl text-sm text-stone-500">{c.race}: {RACES[c.race].traits.join(' ')}</p>}
         </div>
         <div className="grid grid-cols-3 gap-2 text-center">
           <Stat label="HP" value={`${c.hp}/${c.maxHp}`} />
@@ -54,6 +55,18 @@ export function CharacterSheet() {
 
       <div className="mt-5 grid gap-5 md:grid-cols-2">
         <section>
+          <h3 className="mb-2 font-display text-amber-300">Saving throws</h3>
+          <div className="mb-4 grid grid-cols-3 gap-x-4 text-sm sm:grid-cols-6">
+            {ABILITIES.map((a) => {
+              const prof = CLASSES[c.className].saves.includes(a)
+              return (
+                <div key={a} className={`flex justify-between border-b border-stone-800/70 py-0.5 ${prof ? 'text-amber-200' : 'text-stone-400'}`}>
+                  <span>{prof ? '● ' : '○ '}{a}</span>
+                  <span className="tabular-nums">{fmtMod(saveModifier(c, a))}</span>
+                </div>
+              )
+            })}
+          </div>
           <h3 className="mb-2 font-display text-amber-300">Skills</h3>
           <div className="grid grid-cols-2 gap-x-4 text-sm">
             {Object.entries(SKILLS).map(([skill, ab]) => {

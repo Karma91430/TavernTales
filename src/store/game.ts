@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import type { Campaign, Character, Choice, CombatState, Environment, LogEntry, NewLogEntry, RollResult, TimeOfDay } from '../engine/types'
 import type { NarrationLength } from '../llm/narrator'
 import type { SkinId } from '../theme/skins'
+import { resourcesFor } from '../engine/character'
 
 export interface Settings {
   narratorModel: string
@@ -12,6 +13,8 @@ export interface Settings {
   diceSpeed: 'normal' | 'fast'
   /** interface skin: follow the campaign tone, or a fixed one */
   skin: 'auto' | SkinId
+  /** heroic: SRD death saves, characters can die; story: the fallen always wake up */
+  deathRules: 'heroic' | 'story'
 }
 
 export type Phase = 'setup' | 'forging' | 'intro' | 'playing'
@@ -34,6 +37,8 @@ export interface GameData {
   shortRestsLeft: number
   environment: Environment
   timeOfDay: TimeOfDay
+  /** the player character died (heroic death rules) */
+  gameOver: boolean
 }
 
 /** Floating combat text (damage numbers, misses, statuses) over a combatant. */
@@ -98,6 +103,7 @@ export const emptyGame = (): GameData => ({
   shortRestsLeft: 2,
   environment: 'town',
   timeOfDay: 'day',
+  gameOver: false,
 })
 
 export const DATA_KEYS = Object.keys(emptyGame()) as (keyof GameData)[]
@@ -109,10 +115,11 @@ export const useGame = create<GameState>()(
       settings: {
         narratorModel: 'qwen3:8b',
         directorModel: 'qwen3:8b',
-        arbiterModel: 'qwen3.5:2b',
+        arbiterModel: 'qwen3:8b',
         narrationLength: 'medium',
         diceSpeed: 'normal',
         skin: 'auto',
+        deathRules: 'heroic',
       },
       busy: false,
       status: '',
@@ -143,20 +150,47 @@ export const useGame = create<GameState>()(
     }),
     {
       name: 'tavern-tales-save',
-      version: 3,
+      version: 5,
       migrate: (persisted, version) => {
         const p = persisted as Partial<GameData> & { settings?: Partial<Settings> }
         // v1 saves used a different character/inventory model: start fresh but keep settings.
         if (version < 2) return { settings: p?.settings } as GameState
         // v3 added subclasses, level choices, conditions and scenery.
         if (version < 3) {
-          return {
+          persisted = {
             ...p,
             combat: null,
             environment: 'town',
             timeOfDay: 'day',
             party: (p.party ?? []).map((c) => ({ ...c, learned: c.learned ?? [], feats: c.feats ?? [], pendingChoices: c.pendingChoices ?? [] })),
-          } as unknown as GameState
+          }
+        }
+        // v4: the 2B arbiter made poor rules calls; the 8B model now plays every role.
+        if (version < 4) {
+          const p4 = persisted as { settings?: Partial<Settings> }
+          if (p4.settings?.arbiterModel === 'qwen3.5:2b') p4.settings.arbiterModel = 'qwen3:8b'
+        }
+        // v5: SRD 5.2.1 rules — spell slots by level, hit dice, species traits, retired homebrew abilities.
+        if (version < 5) {
+          const g = persisted as Partial<GameData>
+          const LEGACY: Record<string, string | null> = {
+            hail_of_thorns: 'cure_wounds',
+            arcane_shield: 'false_life',
+            shield_bash: null,
+            sweeping_attack: null,
+            rallying_cry: null,
+            poisoned_blade: null,
+            smoke_bomb: null,
+            dirty_trick: null,
+          }
+          const casters = ['Wizard', 'Cleric', 'Bard', 'Ranger']
+          g.combat = null
+          g.party = (g.party ?? []).map((c) => {
+            const race = c.race === 'Half-Orc' ? 'Orc' : c.race
+            const learned = [...new Set((c.learned ?? []).map((id) => (id in LEGACY ? LEGACY[id] : id)).filter((id): id is string => !!id))]
+            const pendingChoices = (c.pendingChoices ?? []).filter((p) => p.kind !== 'ability' || casters.includes(c.className))
+            return { ...c, race, learned, pendingChoices, resources: resourcesFor({ ...c, race }) }
+          })
         }
         return persisted as GameState
       },

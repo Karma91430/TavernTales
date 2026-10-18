@@ -251,7 +251,7 @@
       </div>
       <div class="grid">
         <div class="card reveal"><div class="icon">🗺️</div><h3>World forging</h3><p>Give a premise and a tone. The AI writes a campaign: a main quest, NPCs with secrets, a villain, places and a four-chapter arc.</p></div>
-        <div class="card reveal"><div class="icon">🎲</div><h3>Real dice, real rules</h3><p>Ability checks, advantage, critical hits and saving throws are rolled by the engine, never invented by the AI.</p></div>
+        <div class="card reveal"><div class="icon">🎲</div><h3>Official 5e rules</h3><p>Built on the SRD 5.2.1: spell slots, Concentration, death saves, Weapon Mastery and real monster stat blocks. Every roll comes from the engine, never from the AI.</p></div>
         <div class="card reveal"><div class="icon">⚔️</div><h3>Tactical combat</h3><p>Initiative, attacks against AC, spells and skill moves like Shove, Feint, Hide and Study Weakness, all on a live battlefield.</p></div>
         <div class="card reveal"><div class="icon">👑</div><h3>Boss finishers</h3><p>When a boss falls, you hear the words: <em>“How do you want to do this?”</em> Describe the blow and the narrator brings it to life.</p></div>
         <div class="card reveal"><div class="icon">✨</div><h3>Level up your way</h3><p>Twelve subclasses, new abilities, skill training, ability score improvements and feats. Your companions grow too.</p></div>
@@ -353,7 +353,7 @@
       <div class="roles">
         <div class="card role reveal"><div class="icon">📖</div><h3>The Narrator</h3><p>Writes every scene and voices your companions, streamed as it writes.</p><span class="model">qwen3:8b</span></div>
         <div class="card role reveal"><div class="icon">🎬</div><h3>The Director</h3><p>Builds the world, suggests your next moves, tracks quests, chapters and places.</p><span class="model">qwen3:8b</span></div>
-        <div class="card role reveal"><div class="icon">⚖️</div><h3>The Arbiter</h3><p>Makes the fast rules calls: which skill, which difficulty, what it costs you.</p><span class="model">qwen3.5:2b</span></div>
+        <div class="card role reveal"><div class="icon">⚖️</div><h3>The Arbiter</h3><p>Makes the rules calls: which skill, which difficulty, what it costs you.</p><span class="model">qwen3:8b</span></div>
       </div>
 
       <div class="flow">
@@ -379,7 +379,7 @@
       <div class="start">
         <ul class="reqs reveal">
           <li><span>🦙</span><span><b>Ollama</b> installed and running (<a href="https://ollama.com/download">download</a>).</span></li>
-          <li><span>🧠</span><span><b>Models:</b> <code>qwen3:8b</code> and <code>qwen3.5:2b</code> by default. Any chat model works; pick them in Settings.</span></li>
+          <li><span>🧠</span><span><b>Model:</b> <code>qwen3:8b</code> plays every role by default. Any Ollama chat model works, and each role can use a different one in Settings.</span></li>
           <li><span>🟢</span><span><b>Node.js</b> 22 or newer (the repo's <code>.nvmrc</code> pins Node 26).</span></li>
           <li><span>💻</span><span><b>Hardware:</b> a machine that runs an 8B model comfortably, e.g. a recent Mac or a GPU with 8&nbsp;GB of VRAM.</span></li>
         </ul>
@@ -391,7 +391,6 @@
 
 <span class="c"># 2. get the models</span>
 <span class="p">$ </span>ollama pull qwen3:8b
-<span class="p">$ </span>ollama pull qwen3.5:2b
 
 <span class="c"># 3. play</span>
 <span class="p">$ </span>npm install
@@ -406,7 +405,7 @@
       <div class="section-head reveal"><h2>Questions</h2></div>
       <div class="faq">
         <details class="reveal"><summary>Does it need the internet?</summary><p>Only to download it and the models. After that the game, the AI and your saves all stay on your machine.</p></details>
-        <details class="reveal"><summary>Is it real Dungeons &amp; Dragons?</summary><p>It's inspired by the 5th edition rules (ability checks, AC, advantage, spell slots, subclasses), simplified to fit a solo game with AI companions. It isn't an official D&amp;D product.</p></details>
+        <details class="reveal"><summary>Is it real Dungeons &amp; Dragons?</summary><p>It follows the official fifth-edition rules from the free System Reference Document 5.2.1 (the 2024 rules), with a few clearly labelled simplifications for a solo game without a battle map. The full rulebook is in <a href="https://github.com/Karma91430/TavernTales/blob/main/RULES.md">RULES.md</a>. It isn't an official D&amp;D product.</p></details>
         <details class="reveal"><summary>Can I use other models?</summary><p>Yes. Any Ollama chat model works, and each role can use a different one. A bigger narrator writes better prose; a small, fast arbiter keeps turns snappy.</p></details>
         <details class="reveal"><summary>How long is a turn?</summary><p>On a laptop running an 8B model, about 20 to 40 seconds, and the narration streams in as it's written. Turn on fast dice in Settings to speed up combat.</p></details>
       </div>
@@ -416,7 +415,8 @@
   <footer>
     <div class="wrap">
       <p>🎲 Tavern Tales: a local AI Dungeon Master. <a href="https://github.com/Karma91430/TavernTales">Source on GitHub</a>.</p>
-      <p>Not affiliated with Wizards of the Coast. Dungeons &amp; Dragons is a trademark of Wizards of the Coast.</p>
+      <p>Compatible with fifth edition. Not affiliated with Wizards of the Coast; Dungeons &amp; Dragons is a trademark of Wizards of the Coast LLC.</p>
+      <p style="font-size:14px">This work includes material from the System Reference Document 5.2.1 ("SRD 5.2.1") by Wizards of the Coast LLC, available at <a href="https://www.dndbeyond.com/srd">dndbeyond.com/srd</a>. The SRD 5.2.1 is licensed under the <a href="https://creativecommons.org/licenses/by/4.0/legalcode">Creative Commons Attribution 4.0 International License</a>.</p>
     </div>
   </footer>
 

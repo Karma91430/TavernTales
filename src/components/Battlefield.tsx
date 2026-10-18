@@ -5,6 +5,7 @@ import type { Character, Condition, Enemy } from '../engine/types'
 import { resolveAllyPick } from '../store/fx'
 import { useGame, type Fx } from '../store/game'
 import { ENV_INFO } from './Scenery'
+import { DeathSaves } from './DeathSaves'
 import { Medallion } from './Portrait'
 import { HpBar } from './ui'
 
@@ -98,7 +99,7 @@ function EnemyCard({ e, selected, active, fx }: { e: Enemy; selected: boolean; a
           style={{ background: e.boss ? 'radial-gradient(circle, rgba(220,38,38,0.45), transparent 70%)' : 'radial-gradient(circle, rgba(120,113,108,0.35), transparent 70%)' }}
         >
           {e.boss && !dead && <motion.div className="absolute inset-0 rounded-full border-2 border-red-500/60" animate={{ scale: [1, 1.15, 1], opacity: [0.8, 0.2, 0.8] }} transition={{ repeat: Infinity, duration: 2 }} />}
-          {dead ? '☠️' : e.icon}
+          {e.fled ? '🏳️' : dead ? '☠️' : e.icon}
         </div>
       </Animated>
       {e.boss && <div className="absolute -top-3 left-2 text-xl">👑</div>}
@@ -109,6 +110,11 @@ function EnemyCard({ e, selected, active, fx }: { e: Enemy; selected: boolean; a
       </div>
       <div className="text-[11px] text-stone-500">🛡️ AC {e.ac}</div>
       <Conditions list={e.conditions} />
+      {e.revealed && (
+        <div className="mt-1 text-[10px] leading-tight text-muted">
+          {[e.vulnerable?.length && `weak: ${e.vulnerable.join(', ')}`, e.resist?.length && `resists: ${e.resist.join(', ')}`, e.immune?.length && `immune: ${e.immune.join(', ')}`].filter(Boolean).join(' · ') || 'no special defenses'}
+        </div>
+      )}
     </motion.button>
   )
 }
@@ -138,6 +144,7 @@ function PartyCard({ c, active, fx, temp, conds, dodging, pickable }: { c: Chara
           <span className="text-xs tabular-nums text-stone-300">{c.hp}{temp > 0 && <span className="text-sky-300">+{temp}</span>}</span>
         </div>
         <Conditions list={conds} extra={dodging ? ['🛡️'] : []} />
+        <DeathSaves c={c} />
       </div>
     </motion.button>
   )

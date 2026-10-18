@@ -41,7 +41,7 @@ Rules:
 - needsRoll=false for trivial or risk-free actions (casual talk, walking, looking around a safe room, eating).
 - needsRoll=true when the outcome is uncertain AND failure would matter.
 - Pick the single best skill (or "None" with a raw ability). Guide: Athletics = climb, jump, swim, force, grapple. Acrobatics = balance, tumble, dodge. Stealth = sneak, hide. Sleight of Hand = pickpocket, plant, lockpick. Perception = spot, listen. Investigation = search, deduce. Insight = read intent. Persuasion/Deception/Intimidation = social. Survival = track, navigate. Medicine = heal, stabilize. Arcana = magic lore. History/Religion/Nature = knowledge.
-- DC: 5 trivial, 10 easy, 12-15 medium, 18-20 hard, 25 nearly impossible. Most everyday challenges are 10-13. Reserve 18+ for truly exceptional feats.
+- DC (SRD): 5 very easy, 10 easy, 15 medium, 20 hard, 25 very hard, 30 nearly impossible. Most everyday challenges are 10-13. Reserve 18+ for truly exceptional feats.
 - Default mode is normal. advantage if circumstances clearly help (good plan, help from a companion); disadvantage if they clearly hinder.`,
     },
     { role: 'user', content: `${storyContext(ctx, { logDepth: 4, secrets: false, detailedParty: true })}\n\nPLAYER ACTION: ${action}` },

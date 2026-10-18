@@ -4,12 +4,14 @@ import { armorClass } from '../engine/items'
 import type { Character } from '../engine/types'
 import { useGame } from '../store/game'
 import { Portrait } from './Portrait'
+import { DeathSaves } from './DeathSaves'
 import { Pips, spotlight } from './ui'
 
 function MemberCard({ c, i }: { c: Character; i: number }) {
   const openMenu = useGame((s) => s.openMenu)
   const sub = subclassOf(c)
-  const slots = c.resources.spellSlots
+  const slotKeys = ['slot1', 'slot2', 'slot3'].filter((k) => c.resources[k])
+  const slots = slotKeys.length ? { current: slotKeys.reduce((n, k) => n + c.resources[k].current, 0), max: slotKeys.reduce((n, k) => n + c.resources[k].max, 0) } : null
   return (
     <motion.button
       initial={{ opacity: 0, x: -20 }}
@@ -28,7 +30,7 @@ function MemberCard({ c, i }: { c: Character; i: number }) {
         </div>
         <div className="truncate text-xs text-muted">{sub ? `${sub.icon} ${sub.name}` : `${c.race} ${c.className}`}</div>
         <div className="mt-1 flex items-center justify-between text-xs text-muted">
-          <span className="tabular-nums">❤️ {c.hp}/{c.maxHp} · 🛡️ {armorClass(c)}</span>
+          {c.hp > 0 ? <span className="tabular-nums">❤️ {c.hp}/{c.maxHp} · 🛡️ {armorClass(c)}</span> : <DeathSaves c={c} />}
           {slots && <Pips current={slots.current} max={slots.max} />}
         </div>
       </div>

@@ -3,7 +3,9 @@ import { useEffect, useMemo, useRef } from 'react'
 import { fmtMod } from '../engine/dice'
 import type { LogEntry, RollResult } from '../engine/types'
 import { useGame } from '../store/game'
+import { parseNarration } from '../llm/dialogue'
 import { Medallion } from './Portrait'
+import { SpeakerAvatar, tint, useSpeakers } from './Speakers'
 
 type Item =
   | { kind: 'narration'; id: string; text: string }
@@ -53,24 +55,78 @@ function RollChip({ roll }: { roll: RollResult }) {
 
 const MILESTONE = /^(🎉|🏆|📜|📖|📌|🤝)/
 
+const Quill = () => <span className="ml-1 inline-block" style={{ animation: 'quill 0.9s ease-in-out infinite' }}>✒️</span>
+
+/** One narrator message, split into the DM's voice and each character's own bubble. */
+function Narration({ text, streaming }: { text: string; streaming: boolean }) {
+  const { names, resolve } = useSpeakers()
+  const segments = useMemo(() => parseNarration(text, names), [text, names])
+  if (!text) {
+    return (
+      <div className="panel px-5 py-4 text-muted italic">
+        The Dungeon Master gathers their thoughts…{streaming && <Quill />}
+      </div>
+    )
+  }
+  let labeled = false
+  return (
+    <div className="space-y-3">
+      {segments.map((seg, i) => {
+        const last = i === segments.length - 1
+        if (seg.kind === 'narration') {
+          const showLabel = !labeled
+          labeled = true
+          return (
+            <div key={i} className="panel px-5 py-4 sm:px-6">
+              {showLabel && (
+                <div className="skin-title mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-accent">
+                  <span className="text-base">📖</span> Dungeon Master
+                </div>
+              )}
+              <div className={`${i === 0 ? 'drop-cap' : ''} whitespace-pre-wrap text-[1.06rem] leading-relaxed text-ink`}>
+                {seg.text}
+                {streaming && last && <Quill />}
+              </div>
+            </div>
+          )
+        }
+        const sp = resolve(seg.speaker)
+        const light = tint(sp.color, 0.45)
+        return (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, x: sp.isPlayer ? 16 : -16 }}
+            animate={{ opacity: 1, x: 0 }}
+            className={`flex max-w-[88%] items-start gap-2.5 ${sp.isPlayer ? 'ml-auto flex-row-reverse' : ''}`}
+          >
+            <SpeakerAvatar s={sp} />
+            <div
+              className={`rounded-skin border px-4 py-2.5 backdrop-blur ${sp.isPlayer ? 'rounded-tr-sm' : 'rounded-tl-sm'}`}
+              style={{ borderColor: `${sp.color}80`, background: `linear-gradient(135deg, ${sp.color}33, rgba(0,0,0,0.45) 70%)`, boxShadow: `0 8px 26px -14px ${sp.color}` }}
+            >
+              <div className="mb-0.5 flex flex-wrap items-baseline gap-x-2">
+                <span className="skin-title text-sm" style={{ color: light }}>{sp.name}</span>
+                {(seg.manner || sp.subtitle) && <span className="text-xs italic text-muted">{seg.manner ?? sp.subtitle}</span>}
+              </div>
+              <p className="text-[1.04rem] leading-snug text-ink">
+                “{seg.text}”{streaming && last && <Quill />}
+              </p>
+            </div>
+          </motion.div>
+        )
+      })}
+    </div>
+  )
+}
+
 function Entry({ item, streaming }: { item: Item; streaming: boolean }) {
   const hero = useGame((s) => s.party.find((p) => p.isPlayer))
   switch (item.kind) {
     case 'narration':
-      return (
-        <div className="panel px-5 py-4 sm:px-6">
-          <div className="skin-title mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-accent">
-            <span className="text-base">📖</span> Dungeon Master
-          </div>
-          <div className="drop-cap whitespace-pre-wrap text-[1.06rem] leading-relaxed text-ink">
-            {item.text || <span className="text-muted italic">The Dungeon Master gathers their thoughts…</span>}
-            {streaming && <span className="ml-1 inline-block" style={{ animation: 'quill 0.9s ease-in-out infinite' }}>✒️</span>}
-          </div>
-        </div>
-      )
+      return <Narration text={item.text} streaming={streaming} />
     case 'action':
       return (
-        <div className="ml-auto flex max-w-[85%] items-start gap-2.5">
+        <div className="ml-auto flex max-w-[92%] items-start gap-2.5 pr-1">
           <div className="rounded-skin rounded-tr-sm border border-accent/40 bg-accent/12 px-4 py-2.5 shadow-[0_8px_30px_-12px_var(--t-accent)] backdrop-blur">
             <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
               <span className="skin-title text-sm text-accent">{hero?.name ?? 'You'}</span>
@@ -112,7 +168,7 @@ export function StoryLog() {
   }, [log.length, lastText])
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-1 py-2 [mask-image:linear-gradient(to_bottom,transparent,black_24px)]">
+    <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2 [mask-image:linear-gradient(to_bottom,transparent,black_24px)]">
       <div className="mx-auto max-w-3xl space-y-4 pt-4">
         <AnimatePresence initial={false}>
           {items.map((item, i) => (

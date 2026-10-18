@@ -60,6 +60,9 @@ export function ActionBar() {
           </motion.div>
         ) : choices.length > 0 ? (
           <motion.div key={choices.map((c) => c.text).join('|')} className="grid gap-2 sm:grid-cols-2" initial="hidden" animate="shown" variants={{ shown: { transition: { staggerChildren: 0.07 } } }}>
+            <motion.p variants={{ hidden: { opacity: 0 }, shown: { opacity: 1 } }} className="skin-title flex items-center gap-2 px-1 text-xs uppercase tracking-[0.2em] text-accent sm:col-span-2">
+              <span className="text-base">📖</span> What do you do?
+            </motion.p>
             {choices.map((c, i) => (
               <motion.button
                 key={i}

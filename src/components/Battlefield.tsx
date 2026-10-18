@@ -5,6 +5,7 @@ import type { Character, Condition, Enemy } from '../engine/types'
 import { resolveAllyPick } from '../store/fx'
 import { useGame, type Fx } from '../store/game'
 import { ENV_INFO } from './Scenery'
+import { Medallion } from './Portrait'
 import { HpBar } from './ui'
 
 const FX_COLOR: Record<Fx['tone'], string> = {
@@ -125,9 +126,7 @@ function PartyCard({ c, active, fx, temp, conds, dodging, pickable }: { c: Chara
     >
       <FloatingFx fx={fx} />
       <Animated fx={fx} direction={-1}>
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-3xl sm:h-14 sm:w-14 sm:text-4xl" style={{ background: 'radial-gradient(circle, color-mix(in oklab, var(--color-amber-700) 40%, transparent), transparent 70%)' }}>
-          {down ? '💀' : c.icon}
-        </div>
+        <Medallion c={c} size={52} />
       </Animated>
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-1">

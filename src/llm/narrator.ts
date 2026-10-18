@@ -10,6 +10,8 @@ function system(ctx: StoryContext, length: NarrationLength) {
   const tone = ctx.campaign?.tone ?? 'heroic adventure'
   const c = ctx.campaign
   const finale = !c || c.currentAct >= c.acts.length - 1
+  const player = ctx.party.find((p) => p.isPlayer)?.name
+  const companion = ctx.party.find((p) => !p.isPlayer)?.name
   const villain = c && !finale ? `\n- ${c.antagonist.name} must NOT appear in person yet (it is not the final act): show only their influence, minions, rumors and clues.` : ''
   return `You are an evocative, witty Dungeon Master narrating a D&D adventure for one player and their AI companions. Tone: ${tone}.
 Style:
@@ -19,7 +21,19 @@ Style:
 - The rules engine has ALREADY decided what happens. Narrate that outcome faithfully. Never invent different dice results, damage, or items.
 - Steer the story toward the current act of the outline, at a natural pace. Drop clues. Never reveal NPC secrets or the antagonist outright unless the story has earned it.
 - End on a moment that invites the player to act, but do NOT list options.
-- No headings, no bullet points, no meta commentary.${villain}`
+- No headings, no bullet points, no meta commentary.${villain}
+FORMAT (important, the interface turns this into a conversation with one bubble per character):
+- Narration and description are plain paragraphs, in second person. Never write the player's name${player ? ` (${player})` : ''}: always "you".
+- EVERY line spoken aloud, by a companion, an NPC or a nameless stranger, goes on its OWN line as: Name: "what they say"
+- For a nameless character use a short descriptor as the name, e.g. Young healer: "..." or Hooded stranger: "..."
+- Put gestures and tone in the narration line before, or in parentheses after the name: Mayor Alden (low): "..."
+- Never put quoted speech inside a narration paragraph.
+WRONG:
+Mayor Alden leans over the table. "The caravan is lost," he says, voice low.
+RIGHT:
+Mayor Alden leans over the table, his voice low.
+Mayor Alden: "The caravan is lost."
+${companion ?? 'Your companion'}: "Then we find it."`
 }
 
 const FINISHER_NOTE =

@@ -67,7 +67,9 @@ export async function fight(situation: string, opts: { surprise?: boolean } = {}
 function applyConsequences(c: Consequences, action: string) {
   const { party, updateCharacter, addLog } = get()
   const me = player()
-  for (const e of c.effects) {
+  // Small models sometimes repeat the same effect: apply each distinct one once.
+  const effects = c.effects.filter((e, i, all) => all.findIndex((x) => JSON.stringify(x) === JSON.stringify(e)) === i)
+  for (const e of effects) {
     let target =
       party.find((p) => p.name.toLowerCase() === e.target.toLowerCase() || e.target.toLowerCase().includes(p.name.toLowerCase())) ??
       (/\b(you|player)\b/i.test(e.target) ? me : undefined)

@@ -44,7 +44,7 @@
       overflow-x: hidden;
     }
     a { color: var(--gold-soft); }
-    img { max-width: 100%; display: block; }
+    img { max-width: 100%; height: auto; display: block; }
     h1, h2, h3 { font-family: var(--display); font-weight: 700; line-height: 1.15; margin: 0; }
     .wrap { max-width: var(--max); margin: 0 auto; padding: 0 16px; }
 
@@ -146,6 +146,14 @@
       .shot.flip .shot-img { order: 0; }
     }
 
+    /* Skins gallery */
+    .skins { display: grid; gap: 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    @media (max-width: 680px) { .skins { grid-template-columns: 1fr; } }
+    .skins figure { margin: 0; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); background: #000; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55); transition: transform 0.25s; }
+    .skins figure:hover { transform: translateY(-4px) scale(1.01); }
+    .skins figcaption { padding: 10px 14px; color: var(--muted); font-size: 16px; }
+    .skins figcaption b { font-family: var(--display); color: var(--gold-soft); font-weight: 500; }
+
     /* How it works */
     .roles { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
     .role { text-align: center; }
@@ -230,7 +238,7 @@
       </div>
       <div class="frame reveal">
         <div class="frame-bar"><span></span><span></span><span></span><em>localhost:5173</em></div>
-        <img src="assets/battlefield.jpg" alt="Tavern Tales combat: the party faces a crowned boss and a shadow wraith on a forest battlefield, with action tabs and the narrated story log." width="1568" height="755" />
+        <img src="assets/conversation.jpg" alt="Tavern Tales story view at night in a village: companions Oswin and Fenna each speak in their own colored bubble, party portraits on the left, and four suggested actions below." width="1568" height="755" />
       </div>
     </div>
   </header>
@@ -247,8 +255,11 @@
         <div class="card reveal"><div class="icon">⚔️</div><h3>Tactical combat</h3><p>Initiative, attacks against AC, spells and skill moves like Shove, Feint, Hide and Study Weakness, all on a live battlefield.</p></div>
         <div class="card reveal"><div class="icon">👑</div><h3>Boss finishers</h3><p>When a boss falls, you hear the words: <em>“How do you want to do this?”</em> Describe the blow and the narrator brings it to life.</p></div>
         <div class="card reveal"><div class="icon">✨</div><h3>Level up your way</h3><p>Twelve subclasses, new abilities, skill training, ability score improvements and feats. Your companions grow too.</p></div>
+        <div class="card reveal"><div class="icon">💬</div><h3>A real conversation</h3><p>Every companion and NPC speaks in their own colored bubble, while the Dungeon Master narrates the world around you.</p></div>
         <div class="card reveal"><div class="icon">🧝</div><h3>AI companions</h3><p>Two party members with personalities and personal stakes, who talk, heal you, and fight on their own turns.</p></div>
-        <div class="card reveal"><div class="icon">🌲</div><h3>A living world</h3><p>Colors follow the campaign's tone and the backdrop follows where you are: tavern embers, forest fireflies, crypt fog, desert sand.</p></div>
+        <div class="card reveal"><div class="icon">🎨</div><h3>Six interface skins</h3><p>Gilded Tome, Iron &amp; Ash, Fable, Arcane, Eldritch, High Seas: fonts, colors and ornaments that match your campaign's tone.</p></div>
+        <div class="card reveal"><div class="icon">🌲</div><h3>A living world</h3><p>Parallax landscapes follow where you are and the time of day: castles at dusk, lit village windows, crypt fog, desert dunes.</p></div>
+        <div class="card reveal"><div class="icon">⚡</div><h3>Play in one click</h3><p>Quick Adventure rolls a random hero, premise and tone. Or craft your legend step by step in the creation wizard.</p></div>
         <div class="card reveal"><div class="icon">🎒</div><h3>Inventory, journal, saves</h3><p>Equip loot, track quests and the people you've met, rest at camp, and keep several adventures in save slots.</p></div>
       </div>
     </div>
@@ -260,21 +271,40 @@
     <div class="wrap">
       <div class="section-head reveal">
         <h2>A look inside</h2>
-        <p>Screenshots from a real session: <em>Whispers in the Willow</em>, a campaign generated on a laptop.</p>
+        <p>Screenshots from a real session: <em>Whispers in the Pines</em>, a campaign generated on a laptop.</p>
       </div>
       <div class="showcase">
         <div class="shot reveal">
+          <div class="shot-img"><img src="assets/battlefield.jpg" alt="Combat on a night battlefield: the party portraits face two thugs, with the turn order, action tabs and the story log." loading="lazy" width="1568" height="755" /></div>
+          <div class="shot-text">
+            <h3>Battles you can see</h3>
+            <p>Your party faces the enemy on a live battlefield: turn order, HP rings, conditions, floating damage and a clear set of actions.</p>
+            <ul>
+              <li>Attack, cast, or use a skill move: Shove, Feint, Hide, Study Weakness</li>
+              <li>Companions and enemies act on their own turns</li>
+              <li>The narrator turns each round into a scene</li>
+            </ul>
+          </div>
+        </div>
+        <div class="shot flip reveal">
           <div class="shot-img"><img src="assets/finisher.jpg" alt="Letterboxed finisher screen asking 'How do you want to do this?' with suggestions for a rogue's final blow." loading="lazy" width="1568" height="755" /></div>
           <div class="shot-text">
             <h3>“How do you want to do this?”</h3>
             <p>Land the killing blow on a boss and the game slows down to let you describe it. Pick a suggestion or write your own; the narrator makes it the highlight of the fight.</p>
           </div>
         </div>
+        <div class="shot reveal">
+          <div class="shot-img"><img src="assets/creation.jpg" alt="Character creation wizard: an elf ranger named Lyra with a green portrait medallion, race choices and class cards." loading="lazy" width="1568" height="755" /></div>
+          <div class="shot-text">
+            <h3>Create your legend</h3>
+            <p>Six classes, six races and rolled ability scores, then a premise and a tone. Or hit <em>Surprise me</em> and start playing right away.</p>
+          </div>
+        </div>
         <div class="shot flip reveal">
-          <div class="shot-img"><img src="assets/character.jpg" alt="Character sheet of a level 3 human rogue, Assassin subclass, with ability scores, skills and resources." loading="lazy" width="1568" height="755" /></div>
+          <div class="shot-img"><img src="assets/character.jpg" alt="Character sheet drawer for an elf ranger with ability scores, skills, combat stats and abilities." loading="lazy" width="1568" height="755" /></div>
           <div class="shot-text">
             <h3>Characters that grow</h3>
-            <p>Six classes, six races, and real choices every level:</p>
+            <p>Real choices every level:</p>
             <ul>
               <li>Level 2: a subclass such as Assassin, Battle Master or Life Domain</li>
               <li>Level 3: a new ability and a new skill</li>
@@ -290,14 +320,25 @@
             <p>Resting at camp, leveling up, completing a quest, entering a new place or facing a boss each gets its own animated moment. Camps in the wild can be ambushed.</p>
           </div>
         </div>
-        <div class="shot flip reveal">
-          <div class="shot-img"><img src="assets/title.jpg" alt="Tavern Tales main menu with Continue, New Adventure, Load Game and Settings." loading="lazy" width="1352" height="595" /></div>
-          <div class="shot-text">
-            <h3>Pick up where you left off</h3>
-            <p>Everything saves automatically in your browser. Keep several adventures in save slots, or export a campaign to a file and continue it on another machine.</p>
-          </div>
-        </div>
       </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="skins">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2>Six skins, one tavern</h2>
+        <p>The whole interface changes with your campaign's tone: fonts, colors, ornaments and the landscape behind the menus. Or pick your favorite in Settings.</p>
+      </div>
+      <div class="skins">
+        <figure class="reveal"><img src="assets/title.jpg" alt="Gilded Tome skin: gold title over a castle at dusk." loading="lazy" width="1568" height="755" /><figcaption><b>Gilded Tome</b> · Heroic</figcaption></figure>
+        <figure class="reveal"><img src="assets/skin-eldritch.jpg" alt="Eldritch skin: blackletter title in blood red and sickly green over a foggy graveyard." loading="lazy" width="1568" height="755" /><figcaption><b>Eldritch</b> · Horror</figcaption></figure>
+        <figure class="reveal"><img src="assets/skin-arcane.jpg" alt="Arcane skin: violet and cyan spaced capitals over a starlit temple." loading="lazy" width="1568" height="755" /><figcaption><b>Arcane</b> · Mystery</figcaption></figure>
+        <figure class="reveal"><img src="assets/skin-fable.jpg" alt="Fable skin: rounded mint and pink title over a pine forest." loading="lazy" width="1568" height="755" /><figcaption><b>Fable</b> · Lighthearted</figcaption></figure>
+      </div>
+      <p class="reveal" style="text-align:center;color:var(--muted);margin-top:18px">Plus <b style="color:var(--text)">Iron &amp; Ash</b> for grim tales and <b style="color:var(--text)">High Seas</b> for swashbuckling ones.</p>
     </div>
   </section>
 

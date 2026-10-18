@@ -25,7 +25,12 @@ export function Setup({ models }: { models: string[] }) {
   const [className, setClassName] = useState('Fighter')
   const [scores, setScores] = useState(rollStatArray)
   const [premise, setPremise] = useState(PREMISES[0])
-  const [tone, setTone] = useState(TONES[0])
+  const [tone, setToneState] = useState(TONES.includes(useGame.getState().tone) ? useGame.getState().tone : TONES[0])
+  // Selecting a tone previews its color theme right away.
+  const setTone = (t: string) => {
+    setToneState(t)
+    useGame.setState({ tone: t })
+  }
 
   // Fall back to installed models if the defaults are missing.
   useEffect(() => {

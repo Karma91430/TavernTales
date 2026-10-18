@@ -34,11 +34,23 @@ export interface Resource {
   reset: 'short' | 'long'
 }
 
+export type LevelChoiceKind = 'subclass' | 'ability' | 'skill' | 'asi'
+export interface LevelChoice {
+  level: number
+  kind: LevelChoiceKind
+}
+
 export interface Character {
   id: string
   name: string
   race: string
   className: string
+  subclass?: string
+  /** learnable abilities picked on level-up */
+  learned: string[]
+  feats: string[]
+  /** level-up decisions the player still has to make */
+  pendingChoices: LevelChoice[]
   level: number
   xp: number
   stats: Stats
@@ -68,7 +80,25 @@ export interface Enemy {
   dexMod: number
   saveBonus: number
   xp: number
-  disadvantaged?: boolean
+  boss?: boolean
+  conditions: Condition[]
+}
+
+export type ConditionId =
+  | 'prone' // attacks against it have advantage; stands up at the start of its turn
+  | 'frightened' // its attacks have disadvantage
+  | 'restrained' // attacks against it have advantage, its attacks have disadvantage
+  | 'outlined' // attacks against it have advantage
+  | 'exposed' // weakness found: +2 to hit and damage against it
+  | 'shaken' // disadvantage on its next attack
+  | 'hidden' // advantage on next attack; attacks against you have disadvantage
+  | 'feinting' // advantage on next attack
+  | 'inspired' // +1d6 on next attack roll
+
+export interface Condition {
+  id: ConditionId
+  /** bearer turn-ends left before it expires; -1 = until used or end of combat */
+  turns: number
 }
 
 export interface Combatant {
@@ -85,8 +115,10 @@ export interface CombatState {
   /** attackerId -> targetId (Hunter's Mark) */
   marks: Record<string, string>
   dodging: string[]
-  /** Rogues who already used Sneak Attack this turn */
-  sneakUsed: string[]
+  /** once-per-turn features already used, as "<characterId>:<feature>" */
+  turnFlags: string[]
+  partyConditions: Record<string, Condition[]>
+  tempHp: Record<string, number>
   /** Mechanical events not yet narrated */
   events: string[]
 }
@@ -106,7 +138,16 @@ export interface RollResult {
   success?: boolean
   crit?: 'success' | 'fail' | null
   damageType?: string
+  skill?: string
+  /** tool the character uses for this check, for the dice overlay */
+  tool?: string
 }
+
+export type Environment =
+  | 'town' | 'tavern' | 'forest' | 'dungeon' | 'cave' | 'crypt' | 'castle'
+  | 'temple' | 'coast' | 'mountain' | 'swamp' | 'snow' | 'desert' | 'road'
+export const ENVIRONMENTS: Environment[] = ['town', 'tavern', 'forest', 'dungeon', 'cave', 'crypt', 'castle', 'temple', 'coast', 'mountain', 'swamp', 'snow', 'desert', 'road']
+export type TimeOfDay = 'day' | 'dusk' | 'night'
 
 export interface NPC {
   name: string

@@ -1,3 +1,4 @@
+import { subclassOf } from '../engine/abilities'
 import { armorClass, equippedWeapon } from '../engine/items'
 import type { Character } from '../engine/types'
 import { useGame } from '../store/game'
@@ -21,7 +22,7 @@ function MemberCard({ c, active }: { c: Character; active: boolean }) {
             <span className="truncate font-display text-amber-100">{c.name}</span>
             <span className="shrink-0 text-sm text-stone-400">🛡️{armorClass(c)}</span>
           </div>
-          <div className="truncate text-sm text-stone-400">{c.race} {c.className} · Lv {c.level}</div>
+          <div className="truncate text-sm text-stone-400">{c.race} {c.className}{subclassOf(c) ? ` ${subclassOf(c)!.icon}` : ''} · Lv {c.level}{c.pendingChoices.length > 0 && ' ✨'}</div>
         </div>
       </div>
       <div className="mt-2 flex items-center gap-2">

@@ -1,6 +1,6 @@
 import { abilityMod, pick, rollAbilityScore, rollDie } from './dice'
 import { makeItem } from './items'
-import { ABILITIES, type Ability, type Character, type Item, type Resource, type Stats } from './types'
+import { ABILITIES, type Ability, type Character, type Item, type LevelChoice, type Resource, type Stats } from './types'
 
 export const SKILLS: Record<string, Ability> = {
   Athletics: 'STR',
@@ -103,15 +103,51 @@ export const proficiencyBonus = (level: number) => 2 + Math.floor((level - 1) / 
 export const XP_LEVELS = [0, 300, 900, 2700, 6500, 14000, 23000]
 export const xpForNextLevel = (level: number) => XP_LEVELS[level] ?? Infinity
 
-export function resourcesFor(className: string, level: number): Record<string, Resource> {
+type ResourceOwner = Pick<Character, 'className' | 'level' | 'subclass' | 'stats'>
+
+export function resourcesFor(c: ResourceOwner): Record<string, Resource> {
   const r: Record<string, Resource> = {}
+  const { className, level } = c
   if (CLASSES[className].casting) r.spellSlots = { current: level + 1, max: level + 1, reset: 'long' }
+  if (['Fighter', 'Rogue'].includes(className) && level >= 3) r.stamina = { current: level >= 5 ? 3 : 2, max: level >= 5 ? 3 : 2, reset: 'short' }
   if (className === 'Fighter') {
     r.secondWind = { current: 1, max: 1, reset: 'short' }
     if (level >= 2) r.actionSurge = { current: 1, max: 1, reset: 'short' }
   }
+  if (className === 'Bard') {
+    const n = Math.max(1, abilityMod(c.stats.CHA))
+    r.inspiration = { current: n, max: n, reset: 'long' }
+  }
+  if (c.subclass === 'battle_master') r.superiority = { current: 3, max: 3, reset: 'short' }
+  if (c.subclass === 'war') {
+    const n = Math.max(1, abilityMod(c.stats.WIS))
+    r.warPriest = { current: n, max: n, reset: 'long' }
+  }
   return r
 }
+
+/** Recomputes resource maximums (after a level-up or subclass pick), keeping what was spent. */
+export function refreshResources(c: Character): Character {
+  const fresh = resourcesFor(c)
+  const resources = Object.fromEntries(
+    Object.entries(fresh).map(([k, r]) => {
+      const old = c.resources[k]
+      return [k, old ? { ...r, current: Math.max(0, Math.min(r.max, old.current + (r.max - old.max))) } : r]
+    }),
+  )
+  return { ...c, resources }
+}
+
+/** What the player gets to decide at each level. */
+export const LEVEL_SCHEDULE: Record<number, LevelChoice['kind'][]> = {
+  2: ['subclass'],
+  3: ['ability', 'skill'],
+  4: ['asi'],
+  5: ['ability'],
+}
+
+export const cantripDice = (level: number) => (level >= 5 ? 2 : 1)
+export const hasExtraAttack = (c: Character) => ['Fighter', 'Ranger'].includes(c.className) && c.level >= 5
 
 export function rollStatArray(): number[] {
   return Array.from({ length: 6 }, rollAbilityScore)
@@ -144,6 +180,9 @@ export function createCharacter(opts: {
     name: opts.name,
     race: opts.race,
     className: opts.className,
+    learned: [],
+    feats: [],
+    pendingChoices: [],
     level: 1,
     xp: 0,
     stats,
@@ -152,7 +191,7 @@ export function createCharacter(opts: {
     proficiencies: cls.skills,
     inventory,
     gold: 5 + rollDie(10) + rollDie(10),
-    resources: resourcesFor(opts.className, 1),
+    resources: resourcesFor({ className: opts.className, level: 1, stats }),
     isPlayer: opts.isPlayer,
     personality: opts.personality,
     icon: cls.icon,
@@ -188,15 +227,15 @@ export function gainXp(c: Character, amount: number): { character: Character; le
 
 function levelUp(c: Character): Character {
   const level = c.level + 1
-  const gain = Math.max(1, Math.floor(CLASSES[c.className].hitDie / 2) + 1 + abilityMod(c.stats.CON))
-  const fresh = resourcesFor(c.className, level)
-  const resources = Object.fromEntries(
-    Object.entries(fresh).map(([k, r]) => {
-      const old = c.resources[k]
-      return [k, old ? { ...r, current: Math.min(r.max, old.current + (r.max - old.max)) } : r]
-    }),
-  )
-  return { ...c, level, maxHp: c.maxHp + gain, hp: c.hp + gain, resources }
+  const gain = Math.max(1, Math.floor(CLASSES[c.className].hitDie / 2) + 1 + abilityMod(c.stats.CON)) + (c.feats.includes('tough') ? 2 : 0)
+  const choices = (LEVEL_SCHEDULE[level] ?? []).map((kind) => ({ level, kind }))
+  return refreshResources({
+    ...c,
+    level,
+    maxHp: c.maxHp + gain,
+    hp: c.hp + gain,
+    pendingChoices: [...c.pendingChoices, ...choices],
+  })
 }
 
 export function restoreResources(c: Character, kind: 'short' | 'long'): Character {

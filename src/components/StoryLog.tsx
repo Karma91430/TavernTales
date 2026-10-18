@@ -46,6 +46,11 @@ export function StoryLog() {
   const last = log.at(-1)
   const lastText = last && last.kind !== 'roll' ? last.text : ''
 
+  // Jump to the latest entry when (re)mounted, e.g. when the layout switches for combat.
+  useEffect(() => {
+    bottom.current?.scrollIntoView({ block: 'end' })
+  }, [])
+
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [log.length, lastText])

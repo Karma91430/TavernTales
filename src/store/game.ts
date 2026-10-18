@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Campaign, Character, Choice, CombatState, LogEntry, NewLogEntry, RollResult } from '../engine/types'
+import type { Campaign, Character, Choice, CombatState, Environment, LogEntry, NewLogEntry, RollResult, TimeOfDay } from '../engine/types'
 import type { NarrationLength } from '../llm/narrator'
 
 export interface Settings {
@@ -29,6 +29,27 @@ export interface GameData {
   campaign: Campaign | null
   combat: CombatState | null
   shortRestsLeft: number
+  environment: Environment
+  timeOfDay: TimeOfDay
+}
+
+/** Floating combat text (damage numbers, misses, statuses) over a combatant. */
+export interface Fx {
+  id: string
+  targetId: string
+  text: string
+  tone: 'damage' | 'heal' | 'miss' | 'crit' | 'status' | 'act'
+}
+
+export type CinematicKind = 'levelup' | 'quest' | 'chapter' | 'location' | 'short-rest' | 'long-rest' | 'victory' | 'defeat' | 'flee' | 'battle' | 'item' | 'boss'
+
+export interface Cinematic {
+  id: string
+  kind: CinematicKind
+  title: string
+  subtitle?: string
+  icon?: string
+  duration: number
 }
 
 interface GameState extends GameData {
@@ -40,6 +61,12 @@ interface GameState extends GameData {
   pendingRoll: RollResult | null
   menu: MenuId | null
   menuMember: string | null
+  fx: Fx[]
+  cinematics: Cinematic[]
+  finisher: { enemyName: string; enemyIcon: string; attacker: string; attackerClass: string; byPlayer: boolean } | null
+  allyPick: { prompt: string } | null
+  combatTarget: string | null
+  levelUpOpen: boolean
 
   setSettings: (s: Partial<Settings>) => void
   startGame: (party: Character[], premise: string, tone: string) => void
@@ -64,6 +91,8 @@ export const emptyGame = (): GameData => ({
   campaign: null,
   combat: null,
   shortRestsLeft: 2,
+  environment: 'town',
+  timeOfDay: 'day',
 })
 
 export const DATA_KEYS = Object.keys(emptyGame()) as (keyof GameData)[]
@@ -85,6 +114,12 @@ export const useGame = create<GameState>()(
       pendingRoll: null,
       menu: null,
       menuMember: null,
+      fx: [],
+      cinematics: [],
+      finisher: null,
+      allyPick: null,
+      combatTarget: null,
+      levelUpOpen: false,
 
       setSettings: (s) => set((st) => ({ settings: { ...st.settings, ...s } })),
       startGame: (party, premise, tone) => set({ ...emptyGame(), phase: 'forging', party, premise, tone, error: '' }),
@@ -101,11 +136,22 @@ export const useGame = create<GameState>()(
     }),
     {
       name: 'tavern-tales-save',
-      version: 2,
-      // v1 saves used a different character/inventory model: start fresh but keep settings.
+      version: 3,
       migrate: (persisted, version) => {
-        const p = persisted as { settings?: Partial<Settings> }
-        return (version < 2 ? { settings: p?.settings } : persisted) as GameState
+        const p = persisted as Partial<GameData> & { settings?: Partial<Settings> }
+        // v1 saves used a different character/inventory model: start fresh but keep settings.
+        if (version < 2) return { settings: p?.settings } as GameState
+        // v3 added subclasses, level choices, conditions and scenery.
+        if (version < 3) {
+          return {
+            ...p,
+            combat: null,
+            environment: 'town',
+            timeOfDay: 'day',
+            party: (p.party ?? []).map((c) => ({ ...c, learned: c.learned ?? [], feats: c.feats ?? [], pendingChoices: c.pendingChoices ?? [] })),
+          } as unknown as GameState
+        }
+        return persisted as GameState
       },
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<GameState>
@@ -121,7 +167,9 @@ export const useGame = create<GameState>()(
 // Dice overlay handshake: the game loop awaits the animation before continuing.
 let rollResolver: (() => void) | null = null
 
-export function showRoll(roll: RollResult): Promise<void> {
+export async function showRoll(roll: RollResult): Promise<void> {
+  // Never stack the dice on top of a full-screen cinematic.
+  while (useGame.getState().cinematics.some((c) => c.kind !== 'location')) await new Promise((r) => setTimeout(r, 100))
   return new Promise((resolve) => {
     rollResolver = resolve
     useGame.setState({ pendingRoll: roll })

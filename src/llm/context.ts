@@ -1,3 +1,4 @@
+import { SUBCLASSES } from '../engine/abilities'
 import { abilityMod, fmtMod } from '../engine/dice'
 import { armorClass } from '../engine/items'
 import { ABILITIES, type Campaign, type Character, type CombatState, type LogEntry } from '../engine/types'
@@ -15,7 +16,8 @@ export interface StoryContext {
 
 export function describeCharacter(c: Character, detailed = true): string {
   const status = c.hp <= 0 ? ' [UNCONSCIOUS]' : ''
-  const head = `- ${c.name}${c.isPlayer ? ' (the player)' : ' (companion)'}: ${c.race} ${c.className} lv${c.level}, HP ${c.hp}/${c.maxHp}, AC ${armorClass(c)}${status}`
+  const sub = SUBCLASSES[c.className]?.find((s) => s.id === c.subclass)?.name
+  const head = `- ${c.name}${c.isPlayer ? ' (the player)' : ' (companion)'}: ${c.race} ${c.className}${sub ? ` (${sub})` : ''} lv${c.level}, HP ${c.hp}/${c.maxHp}, AC ${armorClass(c)}${status}`
   if (!detailed) return head
   const stats = ABILITIES.map((a) => `${a} ${c.stats[a]}(${fmtMod(abilityMod(c.stats[a]))})`).join(' ')
   const items = c.inventory.map((i) => `${i.name}${i.qty > 1 ? ` x${i.qty}` : ''}${i.equipped ? ' (equipped)' : ''}`).join(', ')

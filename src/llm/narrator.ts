@@ -8,6 +8,9 @@ const WORDS: Record<NarrationLength, number> = { short: 110, medium: 180, long: 
 
 function system(ctx: StoryContext, length: NarrationLength) {
   const tone = ctx.campaign?.tone ?? 'heroic adventure'
+  const c = ctx.campaign
+  const finale = !c || c.currentAct >= c.acts.length - 1
+  const villain = c && !finale ? `\n- ${c.antagonist.name} must NOT appear in person yet (it is not the final act): show only their influence, minions, rumors and clues.` : ''
   return `You are an evocative, witty Dungeon Master narrating a D&D adventure for one player and their AI companions. Tone: ${tone}.
 Style:
 - Always address the player in second person ("you"), never by their name.
@@ -16,8 +19,11 @@ Style:
 - The rules engine has ALREADY decided what happens. Narrate that outcome faithfully. Never invent different dice results, damage, or items.
 - Steer the story toward the current act of the outline, at a natural pace. Drop clues. Never reveal NPC secrets or the antagonist outright unless the story has earned it.
 - End on a moment that invites the player to act, but do NOT list options.
-- No headings, no bullet points, no meta commentary.`
+- No headings, no bullet points, no meta commentary.${villain}`
 }
+
+const FINISHER_NOTE =
+  ' The player described their FINISHING BLOW on a boss: make it the cinematic highlight, slow-motion and vivid, honoring exactly what they described, with a reaction from the companions.'
 
 export function narrateOpening(model: string, ctx: StoryContext, length: NarrationLength, onText: (t: string) => void) {
   const start = ctx.campaign ? `Begin at ${ctx.campaign.startingLocation}. Deliver the hook: ${ctx.campaign.hook}` : ''
@@ -61,15 +67,16 @@ export function narrateTurn(
 }
 
 export function narrateCombatRound(model: string, ctx: StoryContext, events: string[], playerCanAct: boolean, onText: (t: string) => void) {
+  // Spelled out as events: small models respect these far more than a separate note.
   const standing = (ctx.combat?.enemies ?? [])
     .filter((e) => e.hp > 0)
-    .map((e) => `${e.name} (${e.hp <= e.maxHp / 3 ? 'badly wounded' : e.hp < e.maxHp ? 'wounded' : 'unhurt'})`)
-    .join(', ')
+    .map((e) => `STATUS: ${e.name} is ${e.hp <= e.maxHp / 3 ? 'badly wounded but STILL FIGHTING' : e.hp < e.maxHp ? 'wounded and still fighting' : 'unhurt'} (not dead).`)
+  const finisher = events.some((e) => e.startsWith('FINISHING BLOW'))
   return chatStream(model, [
     { role: 'system', content: system(ctx, 'short') },
     {
       role: 'user',
-      content: `${storyContext(ctx, { logDepth: 0, detailedParty: false })}\n\nCOMBAT EVENTS THIS ROUND, in order (already resolved by the dice):\n${events.map((e) => `- ${e}`).join('\n')}\n\nSTILL STANDING: ${standing || 'none'}\n\nNarrate these events as one fast, visceral passage of under 90 words, in order, faithfully: every hit, miss and fall. Do not add new attacks or outcomes. Enemies listed as still standing are NOT dead or down, even if badly hurt. Companions may shout a few words. ${playerCanAct ? 'End on the moment the player must act.' : 'The player is down; end with the battle raging on.'}`,
+      content: `${storyContext(ctx, { logDepth: 0, detailedParty: false })}\n\nCOMBAT EVENTS THIS ROUND, in order (already resolved by the dice):\n${[...events, ...standing].map((e) => `- ${e}`).join('\n')}\n\nNarrate these events as one fast, visceral passage of under ${finisher ? 170 : 90} words, in order, faithfully: every hit, miss and fall. Do not add new attacks or outcomes. Only creatures whose event says they fall are dead; every STATUS line describes a creature that is still fighting. Companions may shout a few words.${finisher ? FINISHER_NOTE : ''} ${playerCanAct ? 'End on the moment the player must act.' : 'The player is down; end with the battle raging on.'}`,
     },
   ], onText)
 }
@@ -86,11 +93,12 @@ export function narrateCombatEnd(
     defeat: 'The party is beaten but NOT killed. Narrate them being overwhelmed, then waking later: captured, robbed, or left for dead with 1 HP. Make it a new complication for the story, not an ending.',
     fled: 'The party escapes. Narrate a tense escape and where they end up catching their breath. The enemies are still out there.',
   }[outcome]
+  const finisher = events.some((e) => e.startsWith('FINISHING BLOW'))
   return chatStream(model, [
     { role: 'system', content: system(ctx, 'medium') },
     {
       role: 'user',
-      content: `${storyContext(ctx, { logDepth: 0 })}\n\nFINAL COMBAT EVENTS:\n${events.map((e) => `- ${e}`).join('\n')}\n\n${instructions}`,
+      content: `${storyContext(ctx, { logDepth: 0 })}\n\nFINAL COMBAT EVENTS:\n${events.map((e) => `- ${e}`).join('\n')}\n\n${instructions}${finisher ? FINISHER_NOTE : ''}`,
     },
   ], onText)
 }

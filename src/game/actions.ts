@@ -4,6 +4,7 @@ import { formulaRoll } from '../engine/check'
 import { abilityMod, rollDie } from '../engine/dice'
 import { addItem, removeItem, toggleEquip } from '../engine/items'
 import { narrateRest } from '../llm/narrator'
+import { playCinematic } from '../store/fx'
 import { showRoll, useGame } from '../store/game'
 import { useAbility } from './combat'
 import { ctx, get, runExclusive, setStatus, streamNarration, updateScene } from './common'
@@ -45,6 +46,7 @@ export function useConsumable(memberId: string, itemId: string, targetId: string
     const item = user?.inventory.find((i) => i.id === itemId)
     if (!user || !target || !item?.heal) return
     get().updateCharacter(memberId, (c) => ({ ...c, inventory: removeItem(c.inventory, itemId).inventory }))
+    await playCinematic({ kind: 'item', title: item.name, subtitle: `${user.name} → ${target.name}`, icon: '🧪', duration: 1300 })
     const r = formulaRoll('heal', `${item.name} → ${target.name}`, item.heal)
     await showRoll(r)
     get().addLog({ kind: 'roll', roll: r })
@@ -55,7 +57,7 @@ export function useConsumable(memberId: string, itemId: string, targetId: string
 }
 
 export function useAbilityOutOfCombat(memberId: string, abilityId: string, targetId?: string) {
-  const def = ABILITY_DEFS.find((a) => a.id === abilityId)
+  const def = ABILITY_DEFS[abilityId]
   if (!def?.usableOutOfCombat || get().combat) return Promise.resolve()
   return runExclusive(async () => {
     const user = member(memberId)
@@ -100,9 +102,16 @@ export function longRest() {
 
 async function restScene(kind: 'short' | 'long', interrupted: boolean) {
   setStatus(interrupted ? 'Twigs snap beyond the firelight…' : 'The fire crackles…')
-  const narration = await streamNarration((onText) =>
-    narrateRest(get().settings.narratorModel, ctx(), kind, interrupted, onText),
-  )
+  // The resting animation plays while the narrator writes the scene.
+  const [narration] = await Promise.all([
+    streamNarration((onText) => narrateRest(get().settings.narratorModel, ctx(), kind, interrupted, onText)),
+    playCinematic(
+      kind === 'long'
+        ? { kind: 'long-rest', title: interrupted ? 'A restless night…' : 'The night passes', subtitle: interrupted ? 'Something approaches the camp' : 'HP and abilities restored', duration: 4200 }
+        : { kind: 'short-rest', title: 'An hour passes', subtitle: 'Wounds bound, breath regained', duration: 2600 },
+    ),
+  ])
+  if (!interrupted && kind === 'long') useGame.setState({ timeOfDay: 'day' })
   useGame.setState((s) => ({ turn: s.turn + 1 }))
   if (interrupted && (await fight(narration))) return
   await updateScene(narration)

@@ -1,5 +1,6 @@
 import { ENEMY_TYPES } from '../engine/bestiary'
-import { CHOICE_KINDS, type Campaign, type Character, type Choice } from '../engine/types'
+import { CHOICE_KINDS, ENVIRONMENTS, type Campaign, type Character, type Choice, type Environment, type TimeOfDay } from '../engine/types'
+import type { EnemyRequest } from '../engine/bestiary'
 import { describeParty, storyContext, type StoryContext } from './context'
 import { chatJson } from './ollama'
 
@@ -100,6 +101,8 @@ export interface SceneUpdate {
   newSideQuests: { title: string; description: string; objectives: string[] }[]
   beatCompleted: boolean
   combatStarts: boolean
+  environment: Environment
+  timeOfDay: TimeOfDay
 }
 
 const sceneSchema = obj({
@@ -112,6 +115,8 @@ const sceneSchema = obj({
   newSideQuests: { type: 'array', items: obj({ title: str, description: str, objectives: strArray }) },
   beatCompleted: { type: 'boolean' },
   combatStarts: { type: 'boolean' },
+  environment: { type: 'string', enum: ENVIRONMENTS },
+  timeOfDay: { type: 'string', enum: ['day', 'dusk', 'night'] },
 })
 
 const CLASS_HINTS: Record<string, string> = {
@@ -143,25 +148,37 @@ export async function analyzeScene(model: string, ctx: StoryContext, narration: 
 - completedObjectives: exact text of quest objectives clearly accomplished in the latest scene. Usually empty.
 - newSideQuests: 0-1, only if someone explicitly asks the party for help with something new.
 - beatCompleted: true only if the latest scene clearly fulfilled the CURRENT act of the story outline.
-- combatStarts: true ONLY if hostile creatures are attacking or about to attack right now and a fight is unavoidable.`,
+- combatStarts: true ONLY if hostile creatures are attacking or about to attack right now and a fight is unavoidable.
+- environment: the kind of place the party is in now (${ENVIRONMENTS.join(', ')}).
+- timeOfDay: day, dusk or night, from the scene (keep the previous one if unclear).`,
     },
     { role: 'user', content: `${storyContext({ ...ctx, log: [] })}\n\nLATEST SCENE:\n${narration}` },
   ], sceneSchema, 0.7)
   return { ...r, choices: r.choices.filter((c) => c.text.trim()).slice(0, 4) }
 }
 
-export async function identifyEnemies(model: string, ctx: StoryContext, situation: string): Promise<{ name: string; type: string }[]> {
-  const r = await chatJson<{ enemies: { name: string; type: string }[] }>(model, [
+export async function identifyEnemies(model: string, ctx: StoryContext, situation: string): Promise<EnemyRequest[]> {
+  const c = ctx.campaign
+  const antagonist = c?.antagonist.name
+  const finale = !c || c.currentAct >= c.acts.length - 1
+  const r = await chatJson<{ enemies: EnemyRequest[] }>(model, [
     {
       role: 'system',
       content: `List the hostile creatures fighting the party right now (1 to 6). Only creatures actually present and hostile.
-- name: short descriptive name, e.g. "Goblin archer", "Hooded cultist". Same name for identical creatures.
+- name: short descriptive name, e.g. "Goblin archer", "Hooded cultist". Same name for identical creatures. Use the proper name for a named character.
 - type: the closest stat block from this list: ${ENEMY_TYPES.join(', ')}. Use "beast" for animals and "monster" if nothing fits.
+- boss: true for at most ONE creature: the leader, a named villain${antagonist && finale ? ` (such as ${antagonist})` : ''}, or a uniquely dangerous monster. Ordinary minions are never bosses.${antagonist && !finale ? `\n- ${antagonist} is NOT present in this fight (it is too early in the story): use their minions or another creature instead.` : ''}
 If nobody hostile is present, return an empty list.`,
     },
     { role: 'user', content: `${storyContext({ ...ctx, log: ctx.log }, { logDepth: 4, detailedParty: false })}\n\nSITUATION: ${situation}` },
-  ], obj({ enemies: { type: 'array', items: obj({ name: str, type: { type: 'string', enum: ENEMY_TYPES } }) } }), 0.3)
-  return r.enemies
+  ], obj({ enemies: { type: 'array', items: obj({ name: str, type: { type: 'string', enum: ENEMY_TYPES }, boss: { type: 'boolean' } }) } }), 0.3)
+  const isAntagonist = (name: string) => !!antagonist && name.toLowerCase().includes(antagonist.toLowerCase().replace(/^the /, '').split(' ')[0])
+  // Too early for the final villain: swap them for a lieutenant.
+  return r.enemies.map((e) =>
+    isAntagonist(e.name) && !finale
+      ? { name: `${antagonist}'s lieutenant`, type: e.type, boss: true }
+      : { ...e, boss: e.boss || isAntagonist(e.name) },
+  )
 }
 
 export async function summarizeStory(model: string, previousSummary: string, recent: string): Promise<string> {

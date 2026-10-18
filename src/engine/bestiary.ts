@@ -30,25 +30,37 @@ export const BESTIARY: Record<string, Template> = {
   'giant spider': { name: 'Giant Spider', icon: '🕷️', hp: 26, ac: 14, attackBonus: 5, damage: '1d8+3', damageType: 'piercing', dexMod: 3, saveBonus: 3, xp: 200, gold: '0' },
   'bandit leader': { name: 'Bandit Leader', icon: '🏴‍☠️', hp: 27, ac: 15, attackBonus: 4, damage: '1d8+2', damageType: 'slashing', dexMod: 2, saveBonus: 2, xp: 200, gold: '4d10', loot: [['Healing potion', 0.5], ['Rapier', 0.3]] },
   ogre: { name: 'Ogre', icon: '🧌', hp: 59, ac: 11, attackBonus: 6, damage: '2d8+4', damageType: 'bludgeoning', dexMod: -1, saveBonus: -1, xp: 450, gold: '3d10' },
+  'cult leader': { name: 'Cult Leader', icon: '🧙‍♂️', hp: 33, ac: 13, attackBonus: 5, damage: '2d6+3', damageType: 'necrotic', dexMod: 2, saveBonus: 3, xp: 450, gold: '4d10', loot: [['Greater healing potion', 0.6]] },
+  'troll': { name: 'Troll', icon: '👹', hp: 45, ac: 14, attackBonus: 6, damage: '2d6+4', damageType: 'slashing', dexMod: 1, saveBonus: 1, xp: 700, gold: '2d10' },
   beast: { name: 'Wild Beast', icon: '🐗', hp: 13, ac: 12, attackBonus: 4, damage: '1d8+2', damageType: 'piercing', dexMod: 1, saveBonus: 1, xp: 50, gold: '0' },
   monster: { name: 'Monster', icon: '👾', hp: 18, ac: 13, attackBonus: 4, damage: '1d8+2', damageType: 'slashing', dexMod: 1, saveBonus: 1, xp: 100, gold: '1d6' },
 }
 
 export const ENEMY_TYPES = Object.keys(BESTIARY)
 
+export interface EnemyRequest {
+  name: string
+  type: string
+  boss?: boolean
+}
+
 /**
  * Turns the LLM's list of foes into stat-blocked enemies, trimming the
  * encounter to an XP budget so a level-1 party isn't thrown at three ogres.
+ * A boss (at most one) is always kept and gets tougher with the party's level.
  */
-export function buildEncounter(requests: { name: string; type: string }[], partyLevel: number, partySize: number): Enemy[] {
+export function buildEncounter(requests: EnemyRequest[], partyLevel: number, partySize: number): Enemy[] {
   const budget = 100 * partyLevel * partySize
-  const chosen: { name: string; type: string }[] = []
+  const bossIndex = requests.findIndex((r) => r.boss)
+  const ordered = bossIndex >= 0 ? [requests[bossIndex], ...requests.filter((_, i) => i !== bossIndex).map((r) => ({ ...r, boss: false }))] : requests
+  const chosen: EnemyRequest[] = []
   let spent = 0
-  for (const r of requests.slice(0, 6)) {
+  for (const r of ordered.slice(0, 6)) {
     const tpl = BESTIARY[r.type] ?? BESTIARY.monster
-    if (chosen.length && spent + tpl.xp > budget) continue
+    const cost = r.boss ? 0 : tpl.xp
+    if (chosen.length && spent + cost > budget) continue
     chosen.push(r)
-    spent += tpl.xp
+    spent += cost
   }
   const counts: Record<string, number> = {}
   const totals: Record<string, number> = {}
@@ -57,20 +69,23 @@ export function buildEncounter(requests: { name: string; type: string }[], party
     const tpl = BESTIARY[r.type] ?? BESTIARY.monster
     counts[r.name] = (counts[r.name] ?? 0) + 1
     const name = totals[r.name] > 1 ? `${r.name} ${counts[r.name]}` : r.name
+    const hp = r.boss ? Math.round(tpl.hp * 1.5) + 6 * partyLevel : tpl.hp
     return {
       id: crypto.randomUUID(),
       name: name || tpl.name,
       template: r.type in BESTIARY ? r.type : 'monster',
       icon: tpl.icon,
-      hp: tpl.hp,
-      maxHp: tpl.hp,
-      ac: tpl.ac,
-      attackBonus: tpl.attackBonus,
+      hp,
+      maxHp: hp,
+      ac: tpl.ac + (r.boss ? 1 : 0),
+      attackBonus: tpl.attackBonus + (r.boss ? 1 : 0),
       damage: tpl.damage,
       damageType: tpl.damageType,
       dexMod: tpl.dexMod,
-      saveBonus: tpl.saveBonus,
-      xp: tpl.xp,
+      saveBonus: tpl.saveBonus + (r.boss ? 2 : 0),
+      xp: r.boss ? tpl.xp * 2 : tpl.xp,
+      boss: !!r.boss,
+      conditions: [],
     }
   })
 }

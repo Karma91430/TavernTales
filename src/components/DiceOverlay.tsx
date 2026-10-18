@@ -4,6 +4,24 @@ import { fmtMod } from '../engine/dice'
 import type { RollResult } from '../engine/types'
 import { dismissRoll, useGame } from '../store/game'
 
+const SKILL_ICON: Record<string, string> = {
+  Athletics: '🧗', Acrobatics: '🤸', 'Sleight of Hand': '🔓', Stealth: '🌘', Arcana: '🔮', History: '📜',
+  Investigation: '🔍', Nature: '🌿', Religion: '🕯️', 'Animal Handling': '🐴', Insight: '🧠', Medicine: '🩹',
+  Perception: '👁️', Survival: '🧭', Deception: '🎭', Intimidation: '😠', Performance: '🎻', Persuasion: '🗣️',
+}
+
+/** Animated emblem showing which skill (and tool) the hero is using. */
+function SkillEmblem({ skill, tool }: { skill: string; tool?: string }) {
+  return (
+    <motion.div className="flex flex-col items-center" initial={{ scale: 0.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+      <div className="flex h-16 w-16 items-center justify-center rounded-full border border-amber-500/60 bg-amber-950/60 text-4xl shadow-[0_0_30px_rgba(245,158,11,0.35)]" style={{ animation: 'wiggle 0.6s ease-in-out 2' }}>
+        {SKILL_ICON[skill] ?? '🎲'}
+      </div>
+      {tool && <div className="mt-1 text-sm text-amber-200/80">using {tool}</div>}
+    </motion.div>
+  )
+}
+
 const TIMING = {
   normal: { roll: 1400, linger: 2600 },
   fast: { roll: 650, linger: 1300 },
@@ -113,6 +131,7 @@ export function DiceOverlay() {
           exit={{ opacity: 0 }}
           onClick={() => landed && dismissRoll()}
         >
+          {roll.skill && <SkillEmblem skill={roll.skill} tool={roll.tool} />}
           <div className="font-display text-lg tracking-wide text-amber-300">
             {roll.label}
             {roll.mode !== 'normal' && <span className="ml-2 text-sm text-stone-400">({roll.mode})</span>}

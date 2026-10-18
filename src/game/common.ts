@@ -1,4 +1,6 @@
 import { gainXp } from '../engine/character'
+import { autoResolveChoices } from '../engine/leveling'
+import { playCinematic } from '../store/fx'
 import type { Campaign, Quest } from '../engine/types'
 import type { StoryContext } from '../llm/context'
 import { analyzeScene, summarizeStory, type SceneUpdate } from '../llm/director'
@@ -47,10 +49,13 @@ export function lastNarration(): string {
 /** Gives every party member XP and announces level-ups. */
 export function awardXp(amount: number) {
   for (const member of get().party) {
-    const { character, levelsGained } = gainXp(member, amount)
+    const gained = gainXp(member, amount)
+    // Companions decide on their own; the player gets the level-up screen.
+    const character = member.isPlayer ? gained.character : autoResolveChoices(gained.character)
     get().updateCharacter(member.id, () => character)
-    for (const lv of levelsGained) {
+    for (const lv of gained.levelsGained) {
       get().addLog({ kind: 'system', text: `🎉 ${member.name} reaches level ${lv}! (+${character.maxHp - member.maxHp} max HP)` })
+      if (member.isPlayer) void playCinematic({ kind: 'levelup', title: `Level ${lv}`, subtitle: `${member.name} grows stronger`, icon: '✨', duration: 2800 })
     }
   }
 }
@@ -129,13 +134,21 @@ export async function updateScene(narration: string): Promise<SceneUpdate> {
   const fresh = scene.newFacts.filter((f) => f.trim() && !known.has(f.toLowerCase()))
   const location = scene.location || s.location
   const update = s.campaign ? applyCampaignUpdates(s.campaign, scene, s.turn, location) : null
+  if (location && !similar(location, s.location)) void playCinematic({ kind: 'location', title: location, duration: 2600 })
   useGame.setState({
     choices: scene.choices,
     location,
+    environment: scene.environment ?? s.environment,
+    timeOfDay: scene.timeOfDay ?? s.timeOfDay,
     facts: [...s.facts, ...fresh].slice(-MAX_FACTS),
     ...(update ? { campaign: update.campaign } : {}),
   })
-  for (const a of update?.announcements ?? []) get().addLog({ kind: 'system', text: a })
+  for (const a of update?.announcements ?? []) {
+    get().addLog({ kind: 'system', text: a })
+    if (a.startsWith('🏆')) void playCinematic({ kind: 'quest', title: 'Quest Complete', subtitle: a.replace(/^🏆 Quest completed: /, '').replace(/ \(\+\d+ XP\)$/, ''), icon: '🏆', duration: 3000 })
+    else if (a.startsWith('📖')) void playCinematic({ kind: 'chapter', title: a.replace('📖 ', '').replace(' begins.', ''), subtitle: s.campaign?.title, duration: 3000 })
+    else if (a.startsWith('📜')) void playCinematic({ kind: 'quest', title: 'Objective Complete', subtitle: a.replace(/^📜 Objective complete: /, '').replace(/ \(\+\d+ XP\)$/, ''), icon: '📜', duration: 2400 })
+  }
   if (update?.xp) awardXp(update.xp)
   return scene
 }

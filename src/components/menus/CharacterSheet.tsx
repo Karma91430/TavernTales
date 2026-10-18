@@ -1,4 +1,4 @@
-import { abilitiesFor, canUse, CLASS_FEATURES, RESOURCE_LABELS } from '../../engine/abilities'
+import { abilitiesFor, canUse, CLASS_FEATURES, FEATS, RESOURCE_LABELS, subclassOf } from '../../engine/abilities'
 import { attackStats, checkModifier, CLASSES, proficiencyBonus, SKILLS, spellAttackBonus, spellSaveDC, XP_LEVELS, xpForNextLevel } from '../../engine/character'
 import { abilityMod, fmtMod } from '../../engine/dice'
 import { armorClass, describeItem, equippedWeapon } from '../../engine/items'
@@ -24,7 +24,7 @@ export function CharacterSheet() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="font-display text-2xl text-amber-100">{c.icon} {c.name}</div>
-          <div className="text-stone-400">{c.race} {c.className} · Level {c.level}</div>
+          <div className="text-stone-400">{c.race} {c.className}{subclassOf(c) && ` · ${subclassOf(c)!.icon} ${subclassOf(c)!.name}`} · Level {c.level}</div>
           {c.personality && <p className="mt-1 italic text-stone-400">“{c.personality}”</p>}
           {c.backstory && <p className="mt-1 max-w-xl text-stone-300">{c.backstory}</p>}
         </div>
@@ -110,9 +110,18 @@ export function CharacterSheet() {
                   <p className="text-sm text-stone-400">{a.description}</p>
                 </div>
               ))}
-              {CLASS_FEATURES[c.className]?.filter((f) => !abilitiesFor(c).some((a) => f.startsWith(a.name))).map((f) => (
+              {subclassOf(c) && (
+                <p className="text-sm text-amber-200/80">{subclassOf(c)!.icon} <b>{subclassOf(c)!.name}:</b> {subclassOf(c)!.description}</p>
+              )}
+              {FEATS.filter((f) => c.feats.includes(f.id)).map((f) => (
+                <p key={f.id} className="text-sm text-amber-200/80">{f.icon} <b>{f.name}:</b> {f.description}</p>
+              ))}
+              {CLASS_FEATURES[c.className]?.map((f) => (
                 <p key={f} className="text-sm text-stone-400">• {f}</p>
               ))}
+              {c.isPlayer && c.pendingChoices.length > 0 && (
+                <Button size="sm" onClick={() => { openMenu(null); useGame.setState({ levelUpOpen: true }) }}>✨ Make your level-up choices</Button>
+              )}
             </div>
           </div>
         </section>

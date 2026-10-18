@@ -9,8 +9,8 @@ import { useGame } from '../../store/game'
 import { Button, Modal } from '../ui'
 
 const HEADINGS = {
-  subclass: { title: 'Choose your path', hint: 'Your specialization shapes how you fight for the rest of the adventure.' },
-  ability: { title: 'Learn a new ability', hint: 'A new technique or spell joins your arsenal.' },
+  subclass: { title: 'Choose your subclass', hint: 'Your specialization shapes how you fight for the rest of the adventure. Options marked homebrew are Tavern Tales originals.' },
+  ability: { title: 'Learn a new spell', hint: 'Your repertoire grows: choose a spell you can now cast.' },
   skill: { title: 'Train a new skill', hint: 'You become proficient: add your proficiency bonus to these checks.' },
   asi: { title: 'Ability Score Improvement', hint: 'Raise one ability by 2, two abilities by 1, or take a feat.' },
 }

@@ -134,6 +134,7 @@ export function Setup({ models }: { models: string[] }) {
                     placeholder="Your name"
                   />
                   <p className="mt-2 text-muted">{race} {className}</p>
+                  <p className="mt-1 text-xs text-faint">Background bonus: +2 {CLASSES[className].priority[0]}, +1 {CLASSES[className].priority[1]}</p>
                   <div className="mt-4 flex flex-wrap justify-center gap-1.5">
                     {Object.keys(RACES).map((r) => (
                       <button key={r} onClick={() => setRace(r)} className={`rounded-full border px-3 py-1 text-sm transition ${race === r ? 'border-accent bg-accent/15 text-accent' : 'border-line text-muted hover:text-ink'}`}>
@@ -141,6 +142,7 @@ export function Setup({ models }: { models: string[] }) {
                       </button>
                     ))}
                   </div>
+                  <p className="mt-3 text-sm leading-snug text-muted">{RACES[race]?.traits.join(' ')}</p>
                   <Divider className="my-5 w-full" />
                   <div className="flex w-full items-center justify-between">
                     <span className="skin-title text-sm text-muted">Ability scores</span>

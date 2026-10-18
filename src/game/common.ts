@@ -48,7 +48,7 @@ export function lastNarration(): string {
 
 /** Gives every party member XP and announces level-ups. */
 export function awardXp(amount: number) {
-  for (const member of get().party) {
+  for (const member of get().party.filter((m) => !m.dead)) {
     const gained = gainXp(member, amount)
     // Companions decide on their own; the player gets the level-up screen.
     const character = member.isPlayer ? gained.character : autoResolveChoices(gained.character)

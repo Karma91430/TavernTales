@@ -20,7 +20,15 @@ export interface Item {
   damageType?: string
   finesse?: boolean
   ranged?: boolean
+  /** damage die when wielded two-handed */
+  versatile?: string
+  twoHanded?: boolean
+  light?: boolean
+  heavy?: boolean
+  /** 2024 Weapon Mastery property */
+  mastery?: WeaponMastery
   // body armor / shields
+  stealthDisadvantage?: boolean
   armorBase?: number
   dexCap?: number
   acBonus?: number
@@ -28,10 +36,16 @@ export interface Item {
   heal?: string
 }
 
+export type WeaponMastery = 'vex' | 'sap' | 'topple' | 'graze' | 'cleave' | 'nick' | 'push' | 'slow'
+
+export type DamageType = string
+
 export interface Resource {
   current: number
   max: number
   reset: 'short' | 'long'
+  /** uses regained on a Short Rest when reset is 'long' (e.g. Second Wind: 1) */
+  shortRegain?: number
 }
 
 export type LevelChoiceKind = 'subclass' | 'ability' | 'skill' | 'asi'
@@ -61,6 +75,11 @@ export interface Character {
   gold: number
   resources: Record<string, Resource>
   isPlayer: boolean
+  /** at 0 HP: death saving throws (SRD). Absent when not dying. */
+  deathSaves?: { successes: number; failures: number; stable: boolean }
+  dead?: boolean
+  /** Aid spell: extra max HP until the next Long Rest */
+  aid?: number
   personality?: string
   backstory?: string
   icon: string
@@ -82,6 +101,23 @@ export interface Enemy {
   xp: number
   boss?: boolean
   conditions: Condition[]
+  /** SRD stat-block extras */
+  multiattack?: number
+  /** extra damage on hit, e.g. "2d6 poison" */
+  rider?: { dice: string; type: string }
+  traits?: string[]
+  resist?: string[]
+  vulnerable?: string[]
+  immune?: string[]
+  undead?: boolean
+  /** Study action succeeded: traits and defenses are shown */
+  revealed?: boolean
+  /** recharge abilities ready (e.g. Web) */
+  rechargeReady?: boolean
+  /** fire/acid damage stops Regeneration until its next turn */
+  regenBlocked?: boolean
+  /** fled or surrendered (Influence) */
+  fled?: boolean
 }
 
 export type ConditionId =
@@ -93,10 +129,17 @@ export type ConditionId =
   | 'shaken' // disadvantage on its next attack
   | 'hidden' // advantage on next attack; attacks against you have disadvantage
   | 'feinting' // advantage on next attack
-  | 'inspired' // +1d6 on next attack roll
+  | 'inspired' // Bardic Inspiration: add the die to a failed attack roll or save
+  | 'blessed' // Bless: +1d4 to attack rolls and saving throws (concentration)
+  | 'helped' // Help: the next party attack against it has advantage
+  | 'poisoned' // disadvantage on attack rolls and ability checks
+  | 'marked' // Hunter's Mark target (concentration)
+  | 'steady' // Steady Aim: advantage on next attack
 
 export interface Condition {
   id: ConditionId
+  /** caster whose concentration sustains it */
+  source?: string
   /** bearer turn-ends left before it expires; -1 = until used or end of combat */
   turns: number
 }
@@ -119,6 +162,14 @@ export interface CombatState {
   turnFlags: string[]
   partyConditions: Record<string, Condition[]>
   tempHp: Record<string, number>
+  /** casterId -> concentration spell */
+  concentration: Record<string, { spell: string; name: string }>
+  /** what the acting party member has used this turn */
+  budget: { actions: number; bonus: boolean }
+  /** who was caught off guard (rolls initiative with disadvantage) */
+  surprised?: 'party' | 'enemies'
+  /** reactions spent this round, as "<id>:<reaction>" (Parry, Cutting Words) */
+  reactions: string[]
   /** Mechanical events not yet narrated */
   events: string[]
 }

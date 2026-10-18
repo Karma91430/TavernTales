@@ -56,7 +56,7 @@ async function afterNarration(narration: string) {
 }
 
 /** Asks the director who is hostile, then hands over to the combat engine. */
-export async function fight(situation: string, opts: { surprise?: boolean } = {}): Promise<boolean> {
+export async function fight(situation: string, opts: { surprise?: 'party' | 'enemies' } = {}): Promise<boolean> {
   setStatus('Steel is drawn…')
   const foes = await identifyEnemies(get().settings.directorModel, ctx(), situation)
   if (!foes.length) return false
@@ -123,7 +123,7 @@ export function takeAction(action: string) {
     setStatus('The DM considers your action…')
     const intent = await interpretAction(settings.arbiterModel, ctx(), text)
 
-    if (intent.startsFight && (await fight(`${lastNarration()}\n\nThe player attacks: ${text}`, { surprise: true }))) return
+    if (intent.startsFight && (await fight(`${lastNarration()}\n\nThe player attacks: ${text}`, { surprise: 'enemies' }))) return
 
     let roll: RollResult | null = null
     if (intent.needsRoll) {

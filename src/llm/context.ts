@@ -15,7 +15,7 @@ export interface StoryContext {
 }
 
 export function describeCharacter(c: Character, detailed = true): string {
-  const status = c.hp <= 0 ? ' [UNCONSCIOUS]' : ''
+  const status = c.dead ? ' [DEAD]' : c.hp <= 0 ? (c.deathSaves && !c.deathSaves.stable ? ' [DYING]' : ' [UNCONSCIOUS]') : ''
   const sub = SUBCLASSES[c.className]?.find((s) => s.id === c.subclass)?.name
   const head = `- ${c.name}${c.isPlayer ? ' (the player)' : ' (companion)'}: ${c.race} ${c.className}${sub ? ` (${sub})` : ''} lv${c.level}, HP ${c.hp}/${c.maxHp}, AC ${armorClass(c)}${status}`
   if (!detailed) return head

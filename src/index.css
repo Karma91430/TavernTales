@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Cinzel", serif;
+  --font-body: "Crimson Pro", Georgia, serif;
+}
+
+body {
+  @apply bg-stone-950 text-stone-200 font-body text-lg antialiased;
+  background-image: radial-gradient(ellipse at top, rgb(68 40 20 / 0.35), transparent 60%);
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb { background: rgb(120 90 60 / 0.4); border-radius: 4px; }

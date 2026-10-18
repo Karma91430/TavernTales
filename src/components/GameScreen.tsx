@@ -1,4 +1,4 @@
-import { motion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
 import { useEffect } from 'react'
 import { useGame, type MenuId } from '../store/game'
 import { ActionBar } from './ActionBar'
@@ -26,6 +26,46 @@ const MENU: { id: MenuId; icon: string; label: string }[] = [
 ]
 
 const TIME_ICON = { day: '☀️', dusk: '🌆', night: '🌙' }
+const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI']
+
+function IconButton({ icon, label, onClick, disabled = false }: { icon: string; label: string; onClick: () => void; disabled?: boolean }) {
+  return (
+    <motion.button
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.92 }}
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      className="group relative flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface text-lg backdrop-blur transition hover:border-accent hover:shadow-[0_0_16px_-4px_var(--t-accent)] disabled:opacity-40"
+    >
+      {icon}
+      <span className="skin-title pointer-events-none absolute top-full z-30 mt-2 whitespace-nowrap rounded bg-black/80 px-2 py-0.5 text-xs text-ink opacity-0 transition group-hover:opacity-100">{label}</span>
+    </motion.button>
+  )
+}
+
+/** Chapter progress as a little path of nodes. */
+function ChapterPath({ current, total }: { current: number; total: number }) {
+  return (
+    <div className="flex items-center gap-1" title={`Chapter ${current + 1} of ${total}`}>
+      {Array.from({ length: total }, (_, i) => (
+        <div key={i} className="flex items-center gap-1">
+          <motion.span
+            animate={i === current ? { scale: [1, 1.25, 1] } : {}}
+            transition={{ repeat: Infinity, duration: 2 }}
+            className={`skin-title flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] ${
+              i < current ? 'bg-accent/70 text-accent-ink' : i === current ? 'bg-accent text-accent-ink shadow-[0_0_10px_var(--t-accent)]' : 'border border-line text-faint'
+            }`}
+          >
+            {ROMAN[i] ?? i + 1}
+          </motion.span>
+          {i < total - 1 && <span className={`h-px w-4 ${i < current ? 'bg-accent/70' : 'bg-line'}`} />}
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export function GameScreen({ models }: { models: string[] }) {
   const { location, campaign, combat, menu, openMenu, environment, timeOfDay, levelUpOpen, busy, party } = useGame()
@@ -41,49 +81,52 @@ export function GameScreen({ models }: { models: string[] }) {
   }, [pending, busy, combat, cinematicPlaying])
 
   return (
-    <div className="flicker mx-auto flex h-screen max-w-[96rem] flex-col px-3 py-3 sm:px-4">
-      <header className="flex flex-wrap items-center justify-between gap-2 pb-3">
-        <div className="min-w-0">
-          <h1 className="truncate font-display text-xl text-amber-400 sm:text-2xl">{campaign?.title ?? 'Tavern Tales'}</h1>
-          <p className="truncate text-sm text-stone-300">
-            <span title={env.label}>{env.icon}</span> {location || 'Somewhere in the realm'} <span title={timeOfDay}>{TIME_ICON[timeOfDay]}</span>
-            {campaign && <span className="text-stone-500"> · Chapter {campaign.currentAct + 1}/{campaign.acts.length}</span>}
-          </p>
-          {nextObjective && !combat && <p className="truncate text-sm text-amber-200/70">🎯 {nextObjective.text}</p>}
+    <div className="flicker mx-auto flex h-screen max-w-[96rem] flex-col gap-3 px-3 py-3 sm:px-5">
+      <motion.header initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="panel flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="min-w-0">
+            <h1 className="skin-title truncate text-xl text-accent sm:text-2xl">{campaign?.title ?? 'Tavern Tales'}</h1>
+            {campaign && <ChapterPath current={campaign.currentAct} total={campaign.acts.length} />}
+          </div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              className="hidden items-center gap-2 rounded-full border border-line bg-black/25 px-3 py-1 text-sm md:flex"
+            >
+              <span>{env.icon}</span>
+              <span className="max-w-[16rem] truncate text-ink">{location || env.label}</span>
+              <span title={timeOfDay}>{TIME_ICON[timeOfDay]}</span>
+            </motion.div>
+          </AnimatePresence>
         </div>
-        <nav className="flex flex-wrap gap-1">
-          <button
-            onClick={() => useGame.setState({ atTitle: true, menu: null })}
-            disabled={busy}
-            title={busy ? 'Wait for the Dungeon Master to finish' : 'Main menu'}
-            className="flex items-center gap-1.5 rounded-lg border border-stone-700/70 bg-stone-900/70 px-2.5 py-1.5 text-sm text-stone-300 backdrop-blur transition hover:border-amber-600 hover:text-amber-200 disabled:opacity-40"
-          >
-            <span>🏠</span>
-            <span className="hidden font-display text-xs md:inline">Menu</span>
-          </button>
+        <nav className="flex flex-wrap items-center gap-1.5">
           {pending > 0 && (
             <motion.button
               onClick={() => useGame.setState({ levelUpOpen: true })}
-              animate={{ scale: [1, 1.08, 1] }}
+              animate={{ scale: [1, 1.06, 1] }}
               transition={{ repeat: Infinity, duration: 1.4 }}
-              className="rounded-lg border border-yellow-400 bg-yellow-900/50 px-3 py-1.5 font-display text-sm text-yellow-200 shadow-[0_0_15px_rgba(250,204,21,0.4)]"
+              className="skin-title mr-1 rounded-full border border-accent bg-accent/20 px-3 py-1.5 text-sm text-accent shadow-[0_0_18px_-2px_var(--t-accent)]"
             >
               ✨ Level up!
             </motion.button>
           )}
           {MENU.map((m) => (
-            <button
-              key={m.id}
-              onClick={() => openMenu(m.id)}
-              className="flex items-center gap-1.5 rounded-lg border border-stone-700/70 bg-stone-900/70 px-2.5 py-1.5 text-sm text-stone-300 backdrop-blur transition hover:border-amber-600 hover:text-amber-200"
-              title={m.label}
-            >
-              <span>{m.icon}</span>
-              <span className="hidden font-display text-xs md:inline">{m.label}</span>
-            </button>
+            <IconButton key={m.id} icon={m.icon} label={m.label} onClick={() => openMenu(m.id)} />
           ))}
+          <span className="mx-1 h-6 w-px bg-line" />
+          <IconButton icon="🏠" label={busy ? 'Wait for the Dungeon Master…' : 'Main menu'} disabled={busy} onClick={() => useGame.setState({ atTitle: true, menu: null })} />
         </nav>
-      </header>
+      </motion.header>
+
+      {nextObjective && !combat && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="-mt-1 flex items-center gap-2 px-2 text-sm text-muted">
+          <span className="text-accent">🎯</span>
+          <span className="truncate">{nextObjective.text}</span>
+        </motion.div>
+      )}
 
       {combat ? (
         <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row">
@@ -97,16 +140,17 @@ export function GameScreen({ models }: { models: string[] }) {
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
-          <aside className="flex max-h-[38vh] shrink-0 flex-col gap-4 overflow-y-auto lg:max-h-none lg:w-80">
+          <aside className="shrink-0 lg:w-64">
             <PartyPanel />
-            <DiceTray />
           </aside>
-          <main className="flex min-h-0 flex-1 flex-col gap-3">
+          <main className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-3">
             <StoryLog />
             <ActionBar />
           </main>
         </div>
       )}
+
+      <DiceTray />
 
       {menu === 'character' && <CharacterSheet />}
       {menu === 'inventory' && <Inventory />}

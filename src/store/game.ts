@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Campaign, Character, Choice, CombatState, Environment, LogEntry, NewLogEntry, RollResult, TimeOfDay } from '../engine/types'
 import type { NarrationLength } from '../llm/narrator'
+import type { SkinId } from '../theme/skins'
 
 export interface Settings {
   narratorModel: string
@@ -9,6 +10,8 @@ export interface Settings {
   arbiterModel: string
   narrationLength: NarrationLength
   diceSpeed: 'normal' | 'fast'
+  /** interface skin: follow the campaign tone, or a fixed one */
+  skin: 'auto' | SkinId
 }
 
 export type Phase = 'setup' | 'forging' | 'intro' | 'playing'
@@ -109,6 +112,7 @@ export const useGame = create<GameState>()(
         arbiterModel: 'qwen3.5:2b',
         narrationLength: 'medium',
         diceSpeed: 'normal',
+        skin: 'auto',
       },
       busy: false,
       status: '',

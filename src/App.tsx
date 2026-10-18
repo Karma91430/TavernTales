@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { CampaignIntro } from './components/CampaignIntro'
 import { Cinematics } from './components/Cinematics'
@@ -10,21 +11,12 @@ import { Setup } from './components/Setup'
 import { TitleScreen } from './components/TitleScreen'
 import { listModels } from './llm/ollama'
 import { useGame } from './store/game'
-
-/** Campaign tone → color theme (see index.css). */
-const THEMES: Record<string, string> = {
-  Heroic: 'heroic',
-  'Grim & dark': 'grim',
-  Lighthearted: 'bright',
-  Mystery: 'mystery',
-  Horror: 'horror',
-  Swashbuckling: 'sea',
-}
+import { skinForTone } from './theme/skins'
 
 export default function App() {
   const phase = useGame((s) => s.phase)
   const atTitle = useGame((s) => s.atTitle)
-  const tone = useGame((s) => s.campaign?.tone ?? s.tone)
+  const skin = useGame((s) => (s.settings.skin === 'auto' ? skinForTone(s.campaign?.tone ?? s.tone) : s.settings.skin))
   const [models, setModels] = useState<string[]>([])
   const [ollamaError, setOllamaError] = useState('')
 
@@ -35,27 +27,29 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    document.documentElement.dataset.theme = THEMES[tone] ?? 'heroic'
-  }, [tone])
+    document.documentElement.dataset.theme = skin
+  }, [skin])
+
+  const screen = atTitle ? 'title' : phase
 
   return (
     <>
       <Scenery />
       {ollamaError && (
-        <div className="bg-red-950/80 border-b border-red-800 px-4 py-2 text-center text-red-200 text-base">
+        <div className="relative z-30 border-b border-danger/50 bg-black/70 px-4 py-2 text-center text-base text-danger backdrop-blur">
           Can't reach Ollama ({ollamaError}). Start it with <code className="font-mono">ollama serve</code> and reload.
         </div>
       )}
-      {atTitle ? (
-        <TitleScreen models={models} />
-      ) : (
-        <>
-          {phase === 'setup' && <Setup models={models} />}
-          {phase === 'forging' && <Forging />}
-          {phase === 'intro' && <CampaignIntro />}
-          {phase === 'playing' && <GameScreen models={models} />}
-        </>
-      )}
+      {/* Opacity-only transition: a transform/filter here would break fixed-position drawers inside. */}
+      <AnimatePresence mode="wait">
+        <motion.div key={screen} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }}>
+          {screen === 'title' && <TitleScreen models={models} />}
+          {screen === 'setup' && <Setup models={models} />}
+          {screen === 'forging' && <Forging />}
+          {screen === 'intro' && <CampaignIntro />}
+          {screen === 'playing' && <GameScreen models={models} />}
+        </motion.div>
+      </AnimatePresence>
       <DiceOverlay />
       <Cinematics />
       <Finisher />

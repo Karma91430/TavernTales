@@ -1,5 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { useMemo, type CSSProperties } from 'react'
+import { useEffect, useMemo, type CSSProperties } from 'react'
+import { Landscape } from './Landscape'
+import { skinForTone, type SkinId } from '../theme/skins'
 import type { Environment, TimeOfDay } from '../engine/types'
 import { useGame } from '../store/game'
 
@@ -103,38 +105,73 @@ function Stars() {
   )
 }
 
+/** Mouse position → --mx/--my in [-1, 1] for parallax layers. */
+function useParallax() {
+  useEffect(() => {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    let frame = 0
+    const onMove = (e: PointerEvent) => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        document.documentElement.style.setProperty('--mx', ((e.clientX / innerWidth) * 2 - 1).toFixed(3))
+        document.documentElement.style.setProperty('--my', ((e.clientY / innerHeight) * 2 - 1).toFixed(3))
+      })
+    }
+    window.addEventListener('pointermove', onMove)
+    return () => window.removeEventListener('pointermove', onMove)
+  }, [])
+}
+
 export function Scenery() {
   const environment = useGame((s) => s.environment)
   const timeOfDay = useGame((s) => s.timeOfDay)
   const phase = useGame((s) => (s.atTitle ? 'title' : s.phase))
-  const info = ENV_INFO[environment] ?? ENV_INFO.town
-  const particles = info.particles?.(timeOfDay)
-  const key = phase === 'playing' ? `${environment}-${timeOfDay}` : 'menu'
+  useParallax()
+  const skin = useGame((s) => (s.settings.skin === 'auto' ? skinForTone(s.campaign?.tone ?? s.tone) : s.settings.skin))
+  // Menus show the skin's signature landscape; the game shows wherever the party actually is.
+  const inGame = phase === 'playing'
+  const [menuEnv, menuTime] = MENU_SCENE[skin]
+  const env: Environment = inGame ? environment : menuEnv
+  const time: TimeOfDay = inGame ? timeOfDay : menuTime
+  const info = ENV_INFO[env] ?? ENV_INFO.town
+  const particles = inGame || skin !== 'heroic' ? info.particles?.(time) : embersMenu
+  const key = `${env}-${time}`
 
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden>
       <AnimatePresence>
-        <motion.div key={key} className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 2 }}>
-          {phase !== 'playing' ? (
-            <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at top, color-mix(in oklab, var(--color-amber-900) 45%, transparent), transparent 60%)' }} />
-          ) : (
-            <>
-              <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at 50% 0%, ${info.sky[0]}, ${info.sky[1]} 75%)` }} />
-              {info.outdoor && timeOfDay === 'night' && <Stars />}
-              {timeOfDay === 'night' && <div className="absolute inset-0 bg-indigo-950/40" />}
-              {timeOfDay === 'dusk' && <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(249, 115, 22, 0.18), rgba(88, 28, 135, 0.15) 40%, transparent 70%)' }} />}
-              {info.rays && timeOfDay !== 'night' && (
-                <div className="absolute -top-1/4 left-1/4 h-[150%] w-1/2 origin-top blur-2xl" style={{ background: `linear-gradient(to bottom, ${info.rays}, transparent 70%)`, clipPath: 'polygon(35% 0, 65% 0, 100% 100%, 0 100%)', animation: 'rays 12s ease-in-out infinite' }} />
-              )}
-              {info.fog && (
-                <div className="absolute inset-x-[-30%] bottom-0 h-1/2 blur-3xl" style={{ background: `radial-gradient(ellipse at 30% 80%, ${info.fog}, transparent 60%), radial-gradient(ellipse at 70% 90%, ${info.fog}, transparent 55%)`, animation: 'fog 40s ease-in-out infinite alternate' }} />
-              )}
-              {particles && <ParticleField p={particles} />}
-              <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.6))' }} />
-            </>
+        <motion.div key={key} className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.6 }}>
+          <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at 50% 0%, ${info.sky[0]}, ${info.sky[1]} 80%)` }} />
+          {/* skin tint so every theme colors the world a little */}
+          <div className="absolute inset-0 mix-blend-soft-light" style={{ background: 'radial-gradient(ellipse at 50% 30%, color-mix(in oklab, var(--t-accent) 35%, transparent), transparent 70%)' }} />
+          {info.outdoor && time === 'night' && <Stars />}
+          {time === 'night' && <div className="absolute inset-0 bg-indigo-950/40" />}
+          {time === 'dusk' && <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, rgba(249, 115, 22, 0.16), rgba(88, 28, 135, 0.14) 45%, transparent 75%)' }} />}
+          {time !== 'night' && info.outdoor && (
+            <div className="absolute left-1/2 top-[22%] h-40 w-40 -translate-x-1/2 rounded-full blur-2xl" style={{ background: time === 'dusk' ? 'rgba(251,146,60,0.35)' : 'rgba(254,243,199,0.18)' }} />
           )}
+          {info.rays && time !== 'night' && (
+            <div className="absolute -top-1/4 left-1/4 h-[150%] w-1/2 origin-top blur-2xl" style={{ background: `linear-gradient(to bottom, ${info.rays}, transparent 70%)`, clipPath: 'polygon(35% 0, 65% 0, 100% 100%, 0 100%)', animation: 'rays 12s ease-in-out infinite' }} />
+          )}
+          <Landscape env={env} time={time} sky={info.sky} />
+          {info.fog && (
+            <div className="absolute inset-x-[-30%] bottom-0 h-1/2 blur-3xl" style={{ background: `radial-gradient(ellipse at 30% 80%, ${info.fog}, transparent 60%), radial-gradient(ellipse at 70% 90%, ${info.fog}, transparent 55%)`, animation: 'fog 40s ease-in-out infinite alternate' }} />
+          )}
+          {particles && <ParticleField p={particles} />}
+          <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.55))' }} />
         </motion.div>
       </AnimatePresence>
     </div>
   )
 }
+
+const MENU_SCENE: Record<SkinId, [Environment, TimeOfDay]> = {
+  heroic: ['castle', 'dusk'],
+  grim: ['mountain', 'night'],
+  bright: ['forest', 'day'],
+  mystery: ['temple', 'night'],
+  horror: ['crypt', 'night'],
+  sea: ['coast', 'dusk'],
+}
+
+const embersMenu: Particles = { kind: 'rise', count: 22, color: '#fb923c', size: [2, 4], duration: [8, 14], glow: true }

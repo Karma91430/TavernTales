@@ -52,6 +52,15 @@ export function GameScreen({ models }: { models: string[] }) {
           {nextObjective && !combat && <p className="truncate text-sm text-amber-200/70">🎯 {nextObjective.text}</p>}
         </div>
         <nav className="flex flex-wrap gap-1">
+          <button
+            onClick={() => useGame.setState({ atTitle: true, menu: null })}
+            disabled={busy}
+            title={busy ? 'Wait for the Dungeon Master to finish' : 'Main menu'}
+            className="flex items-center gap-1.5 rounded-lg border border-stone-700/70 bg-stone-900/70 px-2.5 py-1.5 text-sm text-stone-300 backdrop-blur transition hover:border-amber-600 hover:text-amber-200 disabled:opacity-40"
+          >
+            <span>🏠</span>
+            <span className="hidden font-display text-xs md:inline">Menu</span>
+          </button>
           {pending > 0 && (
             <motion.button
               onClick={() => useGame.setState({ levelUpOpen: true })}

@@ -1,5 +1,7 @@
 # Tavern Tales
 
+**🌐 [Website & screenshots](https://karma91430.github.io/TavernTales/)**
+
 A local D&D-style adventure game: a web UI with an AI Dungeon Master running entirely on [Ollama](https://ollama.com).
 
 - **World forging:** from a premise and a tone, the AI writes a campaign: main quest with objectives, NPCs with secrets, an antagonist, locations and a 4-act outline.
@@ -12,7 +14,7 @@ A local D&D-style adventure game: a web UI with an AI Dungeon Master running ent
 - **A world that looks like the story:** the color theme follows the campaign tone (heroic, grim, lighthearted, mystery, horror, swashbuckling) and the background follows where you are (tavern embers, forest fireflies, crypt fog, snow, desert sand…) and the time of day.
 - **Cinematics:** battle and boss intros, victory/defeat, level-up, quest and chapter title cards, location banners, potion use, and skill/tool emblems on dice rolls.
 - **Journal:** quests and objectives, people met, places, notes and a running story summary.
-- **Saves:** auto-save, named save slots, export/import to a file.
+- **Main menu & saves:** continue, start a new adventure, load a slot; auto-save, named save slots, export/import to a file.
 
 ## Run
 

@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tavern Tales — a local AI Dungeon Master</title>
+  <meta name="description" content="Tavern Tales turns local Ollama models into your own Dungeon Master: generated campaigns, real dice, tactical turn-based combat, subclasses, bosses and a world that changes around you. Free, open source, 100% local." />
+  <meta property="og:title" content="Tavern Tales — a local AI Dungeon Master" />
+  <meta property="og:description" content="Generated campaigns, real dice, tactical combat and living scenery. Runs entirely on your machine with Ollama." />
+  <meta property="og:image" content="assets/battlefield.jpg" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0c0a09;
+      --bg-2: #1c1917;
+      --panel: rgba(28, 25, 23, 0.72);
+      --border: rgba(180, 83, 9, 0.35);
+      --text: #e7e5e4;
+      --muted: #a8a29e;
+      --faint: #78716c;
+      --gold: #fbbf24;
+      --gold-soft: #fcd34d;
+      --amber: #b45309;
+      --rose: #fb7185;
+      --emerald: #6ee7b7;
+      --display: "Cinzel", serif;
+      --body: "Crimson Pro", Georgia, serif;
+      --radius: 14px;
+      --max: 1120px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--body);
+      font-size: 19px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    a { color: var(--gold-soft); }
+    img { max-width: 100%; display: block; }
+    h1, h2, h3 { font-family: var(--display); font-weight: 700; line-height: 1.15; margin: 0; }
+    .wrap { max-width: var(--max); margin: 0 auto; padding: 0 16px; }
+
+    /* Background: warm glow + rising embers */
+    .glow {
+      position: fixed; inset: 0; z-index: -2; pointer-events: none;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(180, 83, 9, 0.35), transparent 70%),
+        radial-gradient(ellipse 60% 40% at 90% 110%, rgba(127, 29, 29, 0.25), transparent 70%);
+    }
+    #embers { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+    .ember {
+      position: absolute; bottom: -10px; border-radius: 50%;
+      background: #fb923c; box-shadow: 0 0 8px 2px rgba(251, 146, 60, 0.7);
+      animation: rise linear infinite;
+    }
+    @keyframes rise {
+      0% { transform: translate(0, 0) scale(1); opacity: 0; }
+      10% { opacity: 1; }
+      100% { transform: translate(var(--sway), -105vh) scale(0.3); opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #embers { display: none; }
+      .d20 { animation: none !important; }
+    }
+
+    /* Nav */
+    nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(10px); background: rgba(12, 10, 9, 0.7); border-bottom: 1px solid rgba(120, 113, 108, 0.15); }
+    nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; gap: 12px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-family: var(--display); color: var(--gold); text-decoration: none; font-size: 20px; white-space: nowrap; }
+    .nav-links { display: flex; align-items: center; gap: 22px; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-family: var(--display); font-size: 14px; letter-spacing: 0.04em; }
+    .nav-links a:hover { color: var(--gold-soft); }
+    @media (max-width: 720px) { .nav-links a.hide-sm { display: none; } }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; border-radius: 10px;
+      font-family: var(--display); font-size: 15px; letter-spacing: 0.04em; text-decoration: none;
+      border: 1px solid transparent; transition: transform 0.15s, background 0.15s, border-color 0.15s; cursor: pointer;
+    }
+    .btn:hover { transform: translateY(-2px); }
+    .btn-primary { background: var(--amber); color: #fffbeb; border-color: rgba(251, 191, 36, 0.5); box-shadow: 0 8px 30px rgba(180, 83, 9, 0.35); }
+    .btn-primary:hover { background: #d97706; }
+    .btn-ghost { background: rgba(41, 37, 36, 0.7); color: var(--text); border-color: rgba(120, 113, 108, 0.5); }
+    .btn-ghost:hover { border-color: var(--gold); color: var(--gold-soft); }
+    .btn-sm { padding: 7px 14px; font-size: 13px; }
+
+    /* Hero */
+    .hero { padding: 72px 0 40px; text-align: center; }
+    .d20 { width: 110px; height: 110px; margin: 0 auto 18px; cursor: pointer; filter: drop-shadow(0 0 30px rgba(245, 158, 11, 0.45)); animation: bob 5s ease-in-out infinite; transition: transform 0.9s cubic-bezier(.2,.8,.2,1); }
+    @keyframes bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
+    .d20 text { transition: opacity 0.2s; }
+    .eyebrow { font-family: var(--display); letter-spacing: 0.3em; text-transform: uppercase; font-size: 13px; color: var(--muted); }
+    .hero h1 { font-size: clamp(44px, 8vw, 84px); color: var(--gold); margin-top: 10px; text-shadow: 0 4px 30px rgba(180, 83, 9, 0.5); }
+    .tagline { font-size: clamp(20px, 2.6vw, 26px); color: var(--text); margin: 18px auto 0; max-width: 720px; }
+    .sub { color: var(--muted); max-width: 680px; margin: 14px auto 0; }
+    .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 30px; }
+    .badges { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 22px; }
+    .badge { border: 1px solid rgba(120, 113, 108, 0.4); border-radius: 999px; padding: 4px 14px; font-size: 15px; color: var(--muted); background: rgba(28, 25, 23, 0.6); }
+
+    .frame {
+      margin: 56px auto 0; max-width: 1040px; border-radius: 16px; overflow: hidden;
+      border: 1px solid var(--border); background: #1c1917;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7), 0 0 80px rgba(180, 83, 9, 0.18);
+    }
+    .frame-bar { display: flex; align-items: center; gap: 7px; padding: 10px 14px; background: #171412; border-bottom: 1px solid rgba(120, 113, 108, 0.2); }
+    .frame-bar span { width: 11px; height: 11px; border-radius: 50%; background: #44403c; }
+    .frame-bar em { margin-left: 10px; font-style: normal; font-size: 13px; color: var(--faint); font-family: ui-monospace, monospace; }
+
+    /* Sections */
+    section { padding: 88px 0; }
+    .section-head { text-align: center; max-width: 720px; margin: 0 auto 48px; }
+    .section-head h2 { font-size: clamp(30px, 4.4vw, 44px); color: var(--gold-soft); }
+    .section-head p { color: var(--muted); margin-top: 12px; }
+    .divider { height: 1px; max-width: 420px; margin: 0 auto; background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.5), transparent); }
+
+    .grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+    .card {
+      background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 24px; transition: transform 0.2s, border-color 0.2s;
+    }
+    .card:hover { transform: translateY(-4px); border-color: rgba(251, 191, 36, 0.6); }
+    .card .icon { font-size: 34px; }
+    .card h3 { font-size: 19px; color: #fef3c7; margin-top: 12px; }
+    .card p { color: var(--muted); margin: 8px 0 0; font-size: 17px; }
+
+    /* Showcase */
+    .showcase { display: grid; gap: 28px; }
+    .shot { display: grid; gap: 28px; align-items: center; grid-template-columns: 1.4fr 1fr; }
+    .shot.flip { grid-template-columns: 1fr 1.4fr; }
+    .shot.flip .shot-img { order: 2; }
+    .shot-img { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6); }
+    .shot-text h3 { font-size: 26px; color: var(--gold-soft); }
+    .shot-text p { color: var(--muted); margin: 10px 0 0; }
+    .shot-text ul { color: var(--muted); padding-left: 20px; margin: 12px 0 0; }
+    .shot-text li { margin: 4px 0; }
+    @media (max-width: 820px) {
+      .shot, .shot.flip { grid-template-columns: 1fr; }
+      .shot.flip .shot-img { order: 0; }
+    }
+
+    /* How it works */
+    .roles { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .role { text-align: center; }
+    .role .model { display: inline-block; margin-top: 10px; font-family: ui-monospace, monospace; font-size: 14px; color: var(--gold-soft); background: rgba(120, 53, 15, 0.35); border: 1px solid var(--border); padding: 2px 10px; border-radius: 6px; }
+    .flow { margin: 44px auto 0; max-width: 880px; display: grid; gap: 10px; }
+    .step { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 14px; background: var(--panel); border: 1px solid rgba(120, 113, 108, 0.25); border-radius: 12px; padding: 12px 16px; }
+    .step .n { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-family: var(--display); font-size: 14px; background: rgba(180, 83, 9, 0.35); color: var(--gold-soft); border: 1px solid var(--border); }
+    .step .who { font-family: var(--display); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+    .who.arbiter { color: #93c5fd; border-color: rgba(147, 197, 253, 0.4); }
+    .who.engine { color: var(--emerald); border-color: rgba(110, 231, 183, 0.4); }
+    .who.narrator { color: var(--gold-soft); border-color: rgba(252, 211, 77, 0.4); }
+    .who.director { color: #c4b5fd; border-color: rgba(196, 181, 253, 0.4); }
+    .principle { text-align: center; margin: 36px auto 0; max-width: 680px; font-style: italic; color: var(--text); font-size: 21px; }
+    .principle b { color: var(--gold-soft); font-style: normal; }
+    @media (max-width: 560px) { .step { grid-template-columns: 36px 1fr; } .step .who { grid-column: 2; justify-self: start; } }
+
+    /* Get started */
+    .start { display: grid; gap: 24px; grid-template-columns: 1fr 1.3fr; align-items: start; }
+    @media (max-width: 820px) { .start { grid-template-columns: 1fr; } }
+    .reqs { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+    .reqs li { display: flex; gap: 12px; align-items: flex-start; color: var(--muted); }
+    .reqs li b { color: var(--text); font-weight: 600; }
+    .code { position: relative; background: #0f0d0c; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .code pre { margin: 0; padding: 20px; overflow-x: auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14.5px; line-height: 1.7; color: #e7e5e4; }
+    .code .c { color: var(--faint); }
+    .code .p { color: var(--gold); user-select: none; }
+    .copy { position: absolute; top: 10px; right: 10px; }
+
+    /* FAQ */
+    .faq { max-width: 780px; margin: 0 auto; display: grid; gap: 12px; }
+    details { background: var(--panel); border: 1px solid rgba(120, 113, 108, 0.3); border-radius: 12px; padding: 16px 20px; }
+    summary { cursor: pointer; font-family: var(--display); font-size: 17px; color: #fef3c7; list-style: none; }
+    summary::-webkit-details-marker { display: none; }
+    summary::before { content: "✦ "; color: var(--gold); }
+    details p { color: var(--muted); margin: 10px 0 0; }
+
+    footer { padding: 48px 0 60px; text-align: center; color: var(--faint); font-size: 16px; border-top: 1px solid rgba(120, 113, 108, 0.15); }
+    footer a { color: var(--muted); }
+
+    .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.7s ease, transform 0.7s ease; }
+    .reveal.in { opacity: 1; transform: none; }
+  </style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div id="embers" aria-hidden="true"></div>
+
+  <nav>
+    <div class="wrap">
+      <a class="brand" href="#top">🎲 Tavern Tales</a>
+      <div class="nav-links">
+        <a class="hide-sm" href="#features">Features</a>
+        <a class="hide-sm" href="#how">How it works</a>
+        <a class="hide-sm" href="#start">Get started</a>
+        <a class="btn btn-ghost btn-sm" href="https://github.com/Karma91430/TavernTales">★ GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero" id="top">
+    <div class="wrap">
+      <svg class="d20" id="d20" viewBox="0 0 100 100" role="button" aria-label="Roll the die" tabindex="0">
+        <polygon points="50,3 93,27 93,73 50,97 7,73 7,27" fill="#92400e" stroke="#fcd34d" stroke-width="3" stroke-linejoin="round" />
+        <g stroke="#fcd34d" stroke-width="1.5" opacity="0.5" fill="none">
+          <polygon points="50,22 77,66 23,66" />
+          <path d="M50,3 L50,22 M93,27 L77,66 M93,73 L77,66 M50,97 L50,66 M7,73 L23,66 M7,27 L23,66 M50,22 L93,27 M50,22 L7,27" />
+        </g>
+        <text id="d20-face" x="50" y="54" text-anchor="middle" dominant-baseline="middle" fill="#fef3c7" font-size="26" font-weight="700" font-family="Cinzel, serif">20</text>
+      </svg>
+      <div class="eyebrow">Free · Open source · 100% local</div>
+      <h1>Tavern Tales</h1>
+      <p class="tagline">Your own Dungeon Master, running entirely on your machine.</p>
+      <p class="sub">Tavern Tales turns local <a href="https://ollama.com">Ollama</a> models into a storyteller, a showrunner and a rules referee, with real dice, tactical combat and a world that changes around you.</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="#start">⚔️ Start your adventure</a>
+        <a class="btn btn-ghost" href="https://github.com/Karma91430/TavernTales">View on GitHub</a>
+      </div>
+      <div class="badges">
+        <span class="badge">🔒 No API keys</span>
+        <span class="badge">🌐 No cloud, no account</span>
+        <span class="badge">🎲 Real D&amp;D-style rules</span>
+      </div>
+      <div class="frame reveal">
+        <div class="frame-bar"><span></span><span></span><span></span><em>localhost:5173</em></div>
+        <img src="assets/battlefield.jpg" alt="Tavern Tales combat: the party faces a crowned boss and a shadow wraith on a forest battlefield, with action tabs and the narrated story log." width="1568" height="755" />
+      </div>
+    </div>
+  </header>
+
+  <section id="features">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2>Everything a table needs</h2>
+        <p>A full campaign in one evening: a story written for you, rules that are actually enforced, and dice you can watch roll.</p>
+      </div>
+      <div class="grid">
+        <div class="card reveal"><div class="icon">🗺️</div><h3>World forging</h3><p>Give a premise and a tone. The AI writes a campaign: a main quest, NPCs with secrets, a villain, places and a four-chapter arc.</p></div>
+        <div class="card reveal"><div class="icon">🎲</div><h3>Real dice, real rules</h3><p>Ability checks, advantage, critical hits and saving throws are rolled by the engine, never invented by the AI.</p></div>
+        <div class="card reveal"><div class="icon">⚔️</div><h3>Tactical combat</h3><p>Initiative, attacks against AC, spells and skill moves like Shove, Feint, Hide and Study Weakness, all on a live battlefield.</p></div>
+        <div class="card reveal"><div class="icon">👑</div><h3>Boss finishers</h3><p>When a boss falls, you hear the words: <em>“How do you want to do this?”</em> Describe the blow and the narrator brings it to life.</p></div>
+        <div class="card reveal"><div class="icon">✨</div><h3>Level up your way</h3><p>Twelve subclasses, new abilities, skill training, ability score improvements and feats. Your companions grow too.</p></div>
+        <div class="card reveal"><div class="icon">🧝</div><h3>AI companions</h3><p>Two party members with personalities and personal stakes, who talk, heal you, and fight on their own turns.</p></div>
+        <div class="card reveal"><div class="icon">🌲</div><h3>A living world</h3><p>Colors follow the campaign's tone and the backdrop follows where you are: tavern embers, forest fireflies, crypt fog, desert sand.</p></div>
+        <div class="card reveal"><div class="icon">🎒</div><h3>Inventory, journal, saves</h3><p>Equip loot, track quests and the people you've met, rest at camp, and keep several adventures in save slots.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="tour">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2>A look inside</h2>
+        <p>Screenshots from a real session: <em>Whispers in the Willow</em>, a campaign generated on a laptop.</p>
+      </div>
+      <div class="showcase">
+        <div class="shot reveal">
+          <div class="shot-img"><img src="assets/finisher.jpg" alt="Letterboxed finisher screen asking 'How do you want to do this?' with suggestions for a rogue's final blow." loading="lazy" width="1568" height="755" /></div>
+          <div class="shot-text">
+            <h3>“How do you want to do this?”</h3>
+            <p>Land the killing blow on a boss and the game slows down to let you describe it. Pick a suggestion or write your own; the narrator makes it the highlight of the fight.</p>
+          </div>
+        </div>
+        <div class="shot flip reveal">
+          <div class="shot-img"><img src="assets/character.jpg" alt="Character sheet of a level 3 human rogue, Assassin subclass, with ability scores, skills and resources." loading="lazy" width="1568" height="755" /></div>
+          <div class="shot-text">
+            <h3>Characters that grow</h3>
+            <p>Six classes, six races, and real choices every level:</p>
+            <ul>
+              <li>Level 2: a subclass such as Assassin, Battle Master or Life Domain</li>
+              <li>Level 3: a new ability and a new skill</li>
+              <li>Level 4: ability scores or a feat</li>
+              <li>Level 5: Extra Attack, stronger cantrips</li>
+            </ul>
+          </div>
+        </div>
+        <div class="shot reveal">
+          <div class="shot-img"><img src="assets/camp.jpg" alt="Night camp cinematic with a campfire and the words 'A restless night', as the party's rest is interrupted." loading="lazy" width="1568" height="755" /></div>
+          <div class="shot-text">
+            <h3>Moments, not menus</h3>
+            <p>Resting at camp, leveling up, completing a quest, entering a new place or facing a boss each gets its own animated moment. Camps in the wild can be ambushed.</p>
+          </div>
+        </div>
+        <div class="shot flip reveal">
+          <div class="shot-img"><img src="assets/title.jpg" alt="Tavern Tales main menu with Continue, New Adventure, Load Game and Settings." loading="lazy" width="1352" height="595" /></div>
+          <div class="shot-text">
+            <h3>Pick up where you left off</h3>
+            <p>Everything saves automatically in your browser. Keep several adventures in save slots, or export a campaign to a file and continue it on another machine.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="how">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2>Three models, one table</h2>
+        <p>Instead of one chatbot doing everything badly, each job goes to the right model. A TypeScript rules engine sits in the middle and keeps everyone honest.</p>
+      </div>
+      <div class="roles">
+        <div class="card role reveal"><div class="icon">📖</div><h3>The Narrator</h3><p>Writes every scene and voices your companions, streamed as it writes.</p><span class="model">qwen3:8b</span></div>
+        <div class="card role reveal"><div class="icon">🎬</div><h3>The Director</h3><p>Builds the world, suggests your next moves, tracks quests, chapters and places.</p><span class="model">qwen3:8b</span></div>
+        <div class="card role reveal"><div class="icon">⚖️</div><h3>The Arbiter</h3><p>Makes the fast rules calls: which skill, which difficulty, what it costs you.</p><span class="model">qwen3.5:2b</span></div>
+      </div>
+
+      <div class="flow">
+        <div class="step reveal"><span class="n">1</span><span>You describe what you do, or pick a suggested choice.</span></div>
+        <div class="step reveal"><span class="n">2</span><span>Does it need a roll? Which skill, which DC, advantage?</span><span class="who arbiter">Arbiter</span></div>
+        <div class="step reveal"><span class="n">3</span><span>The d20 rolls on screen. Success or failure is decided.</span><span class="who engine">Engine</span></div>
+        <div class="step reveal"><span class="n">4</span><span>Consequences are proposed, then checked and capped.</span><span class="who engine">Arbiter → Engine</span></div>
+        <div class="step reveal"><span class="n">5</span><span>The scene is written from what actually happened.</span><span class="who narrator">Narrator</span></div>
+        <div class="step reveal"><span class="n">6</span><span>New choices, quest progress, location, and whether a fight breaks out.</span><span class="who director">Director</span></div>
+      </div>
+      <p class="principle reveal"><b>The AI never owns the game state.</b> HP, items, dice and rules live in code, so the story can't quietly cheat.</p>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section id="start">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <h2>Get started</h2>
+        <p>Three steps, no account.</p>
+      </div>
+      <div class="start">
+        <ul class="reqs reveal">
+          <li><span>🦙</span><span><b>Ollama</b> installed and running (<a href="https://ollama.com/download">download</a>).</span></li>
+          <li><span>🧠</span><span><b>Models:</b> <code>qwen3:8b</code> and <code>qwen3.5:2b</code> by default. Any chat model works; pick them in Settings.</span></li>
+          <li><span>🟢</span><span><b>Node.js</b> 22 or newer (the repo's <code>.nvmrc</code> pins Node 26).</span></li>
+          <li><span>💻</span><span><b>Hardware:</b> a machine that runs an 8B model comfortably, e.g. a recent Mac or a GPU with 8&nbsp;GB of VRAM.</span></li>
+        </ul>
+        <div class="code reveal">
+          <button class="btn btn-ghost btn-sm copy" id="copy">Copy</button>
+<pre id="cmds"><span class="c"># 1. get the code</span>
+<span class="p">$ </span>git clone https://github.com/Karma91430/TavernTales.git
+<span class="p">$ </span>cd TavernTales
+
+<span class="c"># 2. get the models</span>
+<span class="p">$ </span>ollama pull qwen3:8b
+<span class="p">$ </span>ollama pull qwen3.5:2b
+
+<span class="c"># 3. play</span>
+<span class="p">$ </span>npm install
+<span class="p">$ </span>npm run dev   <span class="c"># → http://localhost:5173</span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq" style="padding-top: 0">
+    <div class="wrap">
+      <div class="section-head reveal"><h2>Questions</h2></div>
+      <div class="faq">
+        <details class="reveal"><summary>Does it need the internet?</summary><p>Only to download it and the models. After that the game, the AI and your saves all stay on your machine.</p></details>
+        <details class="reveal"><summary>Is it real Dungeons &amp; Dragons?</summary><p>It's inspired by the 5th edition rules (ability checks, AC, advantage, spell slots, subclasses), simplified to fit a solo game with AI companions. It isn't an official D&amp;D product.</p></details>
+        <details class="reveal"><summary>Can I use other models?</summary><p>Yes. Any Ollama chat model works, and each role can use a different one. A bigger narrator writes better prose; a small, fast arbiter keeps turns snappy.</p></details>
+        <details class="reveal"><summary>How long is a turn?</summary><p>On a laptop running an 8B model, about 20 to 40 seconds, and the narration streams in as it's written. Turn on fast dice in Settings to speed up combat.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <p>🎲 Tavern Tales: a local AI Dungeon Master. <a href="https://github.com/Karma91430/TavernTales">Source on GitHub</a>.</p>
+      <p>Not affiliated with Wizards of the Coast. Dungeons &amp; Dragons is a trademark of Wizards of the Coast.</p>
+    </div>
+  </footer>
+
+  <script>
+    // Rising embers
+    (function () {
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return
+      const box = document.getElementById('embers')
+      const count = innerWidth < 600 ? 14 : 30
+      for (let i = 0; i < count; i++) {
+        const e = document.createElement('span')
+        const size = 2 + Math.random() * 3
+        const dur = 9 + Math.random() * 12
+        e.className = 'ember'
+        e.style.cssText = `left:${Math.random() * 100}%;width:${size}px;height:${size}px;animation-duration:${dur}s;animation-delay:${-Math.random() * dur}s;--sway:${(Math.random() - 0.5) * 140}px`
+        box.appendChild(e)
+      }
+    })()
+
+    // Click the d20 to roll it
+    ;(function () {
+      const die = document.getElementById('d20')
+      const face = document.getElementById('d20-face')
+      let spins = 0
+      function roll() {
+        spins += 1
+        die.style.transform = `rotate(${spins * 720}deg)`
+        let ticks = 0
+        const t = setInterval(() => {
+          face.textContent = 1 + Math.floor(Math.random() * 20)
+          if (++ticks > 12) {
+            clearInterval(t)
+            const n = 1 + Math.floor(Math.random() * 20)
+            face.textContent = n
+            face.setAttribute('fill', n === 20 ? '#fde047' : n === 1 ? '#fca5a5' : '#fef3c7')
+          }
+        }, 65)
+      }
+      die.addEventListener('click', roll)
+      die.addEventListener('keydown', (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), roll()))
+    })()
+
+    // Copy install commands
+    document.getElementById('copy').addEventListener('click', async (e) => {
+      const text = [...document.getElementById('cmds').innerText.split('\n')]
+        .filter((l) => l.startsWith('$ '))
+        .map((l) => l.slice(2).replace(/\s+# .*$/, ''))
+        .join('\n')
+      try {
+        await navigator.clipboard.writeText(text)
+        e.target.textContent = 'Copied!'
+      } catch {
+        e.target.textContent = 'Select & copy'
+      }
+      setTimeout(() => (e.target.textContent = 'Copy'), 1800)
+    })
+
+    // Reveal on scroll
+    const io = new IntersectionObserver((entries) => {
+      for (const en of entries) if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target) }
+    }, { threshold: 0.12 })
+    document.querySelectorAll('.reveal').forEach((el) => io.observe(el))
+  </script>
+</body>
+</html>

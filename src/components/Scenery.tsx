@@ -106,7 +106,7 @@ function Stars() {
 export function Scenery() {
   const environment = useGame((s) => s.environment)
   const timeOfDay = useGame((s) => s.timeOfDay)
-  const phase = useGame((s) => s.phase)
+  const phase = useGame((s) => (s.atTitle ? 'title' : s.phase))
   const info = ENV_INFO[environment] ?? ENV_INFO.town
   const particles = info.particles?.(timeOfDay)
   const key = phase === 'playing' ? `${environment}-${timeOfDay}` : 'menu'

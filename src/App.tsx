@@ -7,6 +7,7 @@ import { Forging } from './components/Forging'
 import { GameScreen } from './components/GameScreen'
 import { Scenery } from './components/Scenery'
 import { Setup } from './components/Setup'
+import { TitleScreen } from './components/TitleScreen'
 import { listModels } from './llm/ollama'
 import { useGame } from './store/game'
 
@@ -22,6 +23,7 @@ const THEMES: Record<string, string> = {
 
 export default function App() {
   const phase = useGame((s) => s.phase)
+  const atTitle = useGame((s) => s.atTitle)
   const tone = useGame((s) => s.campaign?.tone ?? s.tone)
   const [models, setModels] = useState<string[]>([])
   const [ollamaError, setOllamaError] = useState('')
@@ -44,10 +46,16 @@ export default function App() {
           Can't reach Ollama ({ollamaError}). Start it with <code className="font-mono">ollama serve</code> and reload.
         </div>
       )}
-      {phase === 'setup' && <Setup models={models} />}
-      {phase === 'forging' && <Forging />}
-      {phase === 'intro' && <CampaignIntro />}
-      {phase === 'playing' && <GameScreen models={models} />}
+      {atTitle ? (
+        <TitleScreen models={models} />
+      ) : (
+        <>
+          {phase === 'setup' && <Setup models={models} />}
+          {phase === 'forging' && <Forging />}
+          {phase === 'intro' && <CampaignIntro />}
+          {phase === 'playing' && <GameScreen models={models} />}
+        </>
+      )}
       <DiceOverlay />
       <Cinematics />
       <Finisher />

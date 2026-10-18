@@ -50,7 +50,7 @@ export function deleteSlot(id: string) {
 }
 
 function loadData(data: GameData) {
-  useGame.setState({ ...data, busy: false, status: '', pendingRoll: null, menu: null })
+  useGame.setState({ ...data, busy: false, status: '', pendingRoll: null, menu: null, atTitle: false })
 }
 
 export function exportGame() {

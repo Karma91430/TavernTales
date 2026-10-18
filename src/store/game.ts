@@ -67,6 +67,8 @@ interface GameState extends GameData {
   allyPick: { prompt: string } | null
   combatTarget: string | null
   levelUpOpen: boolean
+  /** main menu shown over everything (always on at launch) */
+  atTitle: boolean
 
   setSettings: (s: Partial<Settings>) => void
   startGame: (party: Character[], premise: string, tone: string) => void
@@ -120,6 +122,7 @@ export const useGame = create<GameState>()(
       allyPick: null,
       combatTarget: null,
       levelUpOpen: false,
+      atTitle: true,
 
       setSettings: (s) => set((st) => ({ settings: { ...st.settings, ...s } })),
       startGame: (party, premise, tone) => set({ ...emptyGame(), phase: 'forging', party, premise, tone, error: '' }),

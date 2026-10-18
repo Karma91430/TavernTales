@@ -56,6 +56,7 @@ export function Setup({ models }: { models: string[] }) {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
+      <button onClick={() => useGame.setState({ atTitle: true })} className="font-display text-sm text-stone-400 hover:text-amber-300">← Main menu</button>
       <h1 className="text-center font-display text-4xl text-amber-400 sm:text-5xl">Tavern Tales</h1>
       <p className="mt-2 text-center italic text-stone-400">A local AI Dungeon Master, powered by Ollama</p>
       {error && <p className="mx-auto mt-4 max-w-2xl rounded-lg border border-red-800 bg-red-950/60 px-4 py-2 text-center text-red-200">{error}</p>}
